@@ -1,4 +1,4 @@
-# MIMC官方详细文档点击此链接：[详细文档](https://admin.mimc.chat.xiaomi.net/docs/0402-ios.html)
+# MIMC官方详细文档点击此链接：[详细文档](https://admin.mimc.chat.xiaomi.net/docs/0407-go.html)
 
 ## 联系我们
 
