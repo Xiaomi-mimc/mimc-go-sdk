@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	"mimc-go-sdk/util/string"
 )
 
 type RC4Cryption struct {

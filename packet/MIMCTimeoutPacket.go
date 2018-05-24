@@ -1,7 +1,7 @@
 package packet
 
 import (
-	"mimc-go-sdk/protobuf/mimc"
+	"github.com/Xiaomi-mimc/mimc-go-sdk/protobuf/mimc"
 )
 
 type MIMCTimeoutPacket struct {

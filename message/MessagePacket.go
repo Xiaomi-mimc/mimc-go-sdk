@@ -1,7 +1,7 @@
 package msg
 
 import (
-	"mimc-go-sdk/packet"
+	"github.com/Xiaomi-mimc/mimc-go-sdk/packet"
 )
 
 type MsgPacket struct {

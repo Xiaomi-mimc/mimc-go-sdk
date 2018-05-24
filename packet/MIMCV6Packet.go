@@ -2,12 +2,12 @@ package packet
 
 import (
 	"bytes"
+	"github.com/Xiaomi-mimc/mimc-go-sdk/cipher"
+	"github.com/Xiaomi-mimc/mimc-go-sdk/common/constant"
+	"github.com/Xiaomi-mimc/mimc-go-sdk/protobuf/ims"
+	"github.com/Xiaomi-mimc/mimc-go-sdk/util/byte"
+	"github.com/Xiaomi-mimc/mimc-go-sdk/util/log"
 	"github.com/golang/protobuf/proto"
-	"mimc-go-sdk/cipher"
-	"mimc-go-sdk/common/constant"
-	"mimc-go-sdk/protobuf/ims"
-	"mimc-go-sdk/util/byte"
-	"mimc-go-sdk/util/log"
 )
 
 var logger *log.Logger = log.GetLogger(log.InfoLevel)

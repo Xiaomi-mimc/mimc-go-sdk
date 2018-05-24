@@ -21,7 +21,7 @@ package ims
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import protocol "mimc-go-sdk/protobuf/protocol"
+import protocol "github.com/Xiaomi-mimc/mimc-go-sdk/protobuf/protocol"
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal

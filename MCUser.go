@@ -3,17 +3,17 @@ package mimc
 import (
 	"container/list"
 	"encoding/json"
-	"mimc-go-sdk/common/constant"
-	"mimc-go-sdk/frontend"
-	"mimc-go-sdk/message"
-	"mimc-go-sdk/packet"
-	. "mimc-go-sdk/protobuf/ims"
-	. "mimc-go-sdk/protobuf/mimc"
-	"mimc-go-sdk/util/byte"
-	"mimc-go-sdk/util/log"
-	"mimc-go-sdk/util/map"
-	"mimc-go-sdk/util/queue"
-	"mimc-go-sdk/util/string"
+	"github.com/Xiaomi-mimc/mimc-go-sdk/common/constant"
+	"github.com/Xiaomi-mimc/mimc-go-sdk/frontend"
+	"github.com/Xiaomi-mimc/mimc-go-sdk/message"
+	"github.com/Xiaomi-mimc/mimc-go-sdk/packet"
+	. "github.com/Xiaomi-mimc/mimc-go-sdk/protobuf/ims"
+	. "github.com/Xiaomi-mimc/mimc-go-sdk/protobuf/mimc"
+	"github.com/Xiaomi-mimc/mimc-go-sdk/util/byte"
+	"github.com/Xiaomi-mimc/mimc-go-sdk/util/log"
+	"github.com/Xiaomi-mimc/mimc-go-sdk/util/map"
+	"github.com/Xiaomi-mimc/mimc-go-sdk/util/queue"
+	"github.com/Xiaomi-mimc/mimc-go-sdk/util/string"
 	"os"
 	"os/exec"
 	"strconv"
@@ -64,9 +64,8 @@ type MCUser struct {
 	messageToAck  *cmap.ConMap
 }
 
-func New(appId int64, appAccount string) *MCUser {
+func NewUser(appAccount string) *MCUser {
 	this := NewMCUser()
-	this.appId = appId
 	this.appAccount = appAccount
 	return this
 }
@@ -104,12 +103,13 @@ func (this *MCUser) InitAndSetup() {
 	this.appPackage = void
 	this.chid = 0
 	this.uuid = 0
+	this.appId = 0
 	this.token = &void
 	this.securityKey = void
 	this.clientAttrs = void
 	this.cloudAttrs = void
 	this.tryLogin = false
-	this.synchronizeResource()
+	//this.synchronizeResource()
 	go this.sendRoutine()
 	go this.receiveRoutine()
 	go this.triggerRoutine()
@@ -144,6 +144,7 @@ func (this *MCUser) Login() bool {
 		}
 		this.appPackage = data["appPackage"].(string)
 		this.chid = data["miChid"].(float64)
+		this.appId, _ = strconv.ParseInt(data["appId"].(string), 10, 64)
 		uuid, err := strconv.ParseInt(data["miUserId"].(string), 10, 64)
 		if err != nil {
 			logger.Error("%v Login fail, can not parse token string.", this.appAccount)
@@ -156,6 +157,7 @@ func (this *MCUser) Login() bool {
 			tokenStr := token.(string)
 			this.token = &(tokenStr)
 			this.tryLogin = false
+			this.synchronizeResource()
 			return true
 		} else {
 			return false

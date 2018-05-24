@@ -28,7 +28,6 @@ func Substring(str *string, from int) string {
 }
 
 func Substr(str *string, from, to int) string {
-	fmt.Printf("str:%v, from:%v, to:%v\n", *str, from, to)
 	source := []rune(*str)
 	if from >= 0 && from <= to {
 		length := len(source)
