@@ -180,7 +180,7 @@ func (this *MCUser) SendMessage(toAppAccount string, msgByte []byte) string {
 	if &toAppAccount == nil || msgByte == nil || len(msgByte) == 0 {
 		return ""
 	}
-	logger.Debug("[SendMessage]%v send p2p msg to %v: %v.\n", this.appAccount, toAppAccount, string(msgByte))
+	logger.Info("[Send P2P Msg]%v -> %v: %v.\n", this.appAccount, toAppAccount, string(msgByte))
 	v6Packet, mimcPacket := BuildP2PMessagePacket(this, toAppAccount, msgByte, true)
 	timeoutPacket := packet.NewTimeoutPacket(CurrentTimeMillis(), mimcPacket)
 	msgPacket := msg.NewMsgPacket(cnst.MIMC_C2S_DOUBLE_DIRECTION, v6Packet)
@@ -194,7 +194,7 @@ func (this *MCUser) SendGroupMessage(topicId *int64, msgByte []byte) string {
 	if &topicId == nil || msgByte == nil || len(msgByte) == 0 {
 		return ""
 	}
-	logger.Debug("[SendMessage]%v send p2t msg to %v: %v.\n", this.appAccount, *topicId, string(msgByte))
+	logger.Info("[Send P2T Msg]%v send p2t msg to %v: %v.\n", this.appAccount, *topicId, string(msgByte))
 	v6Packet, mimcPacket := BuildP2TMessagePacket(this, *topicId, msgByte, true)
 	timeoutPacket := packet.NewTimeoutPacket(CurrentTimeMillis(), mimcPacket)
 	msgPacket := msg.NewMsgPacket(cnst.MIMC_C2S_DOUBLE_DIRECTION, v6Packet)

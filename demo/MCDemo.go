@@ -17,9 +17,9 @@ var httpUrl string = "https://mimc.chat.xiaomi.net/api/account/token"
 var appId int64 = int64(2882303761517613988)
 var appKey string = "5361761377988"
 var appSecurt string = "2SZbrJOAL1xHRKb7L9AiRQ=="
-var appAccount1 string = "leijun"
+var appAccount1 string = "123"
 var acc1UUID = int64(10776577642332160)
-var appAccount2 string = "mifen"
+var appAccount2 string = "abc"
 var acc2UUID = int64(10778725662851072)
 
 func main() {
@@ -34,12 +34,8 @@ func main() {
 
 	// 互发消息
 	leijun.SendMessage(appAccount2, []byte("Are you OK?"))
-	leijun.SendMessage(appAccount2, []byte("Are you Okay?"))
-	leijun.SendMessage(appAccount2, []byte("R U OK?"))
 	mifen.SendMessage(appAccount1, []byte("I am Fine. Thanks!"))
-	mifen.SendMessage(appAccount1, []byte("I'm Fine. Thanks!"))
-	mifen.SendMessage(appAccount1, []byte("i m fine. thx!"))
-	mimc.Sleep(3000)
+	mimc.Sleep(15000)
 
 	// 用户退出
 	leijun.Logout()
