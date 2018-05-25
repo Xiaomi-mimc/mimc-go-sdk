@@ -25,7 +25,7 @@ MIMC-Go-SDK的源码已经上传到github中，开发者可以下载至本地GOP
 ### 下载源码
 ```sbtshell
     go get github.com/Xiaomi-mimc/mimc-go-sdk
-    cd $GOPATH/github.com/Xiaomi-mimc/mimc-go-sdk
+    cd $GOPATH/src/github.com/Xiaomi-mimc/mimc-go-sdk
     go build
     go install
 ```
