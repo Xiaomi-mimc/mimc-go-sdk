@@ -88,9 +88,9 @@ func Encrypt(key []byte, content []byte) []byte {
 	return enData
 }
 
-func GenerateKeyForRC4(key, id string) []byte {
-	value := []byte(id)
-	keyBytes, _ := base64.StdEncoding.DecodeString(key)
+func GenerateKeyForRC4(key, id *string) []byte {
+	value := []byte(*id)
+	keyBytes, _ := base64.StdEncoding.DecodeString(*key)
 	buffer := new(bytes.Buffer)
 	buffer.Write(keyBytes)
 	buffer.WriteByte('_')

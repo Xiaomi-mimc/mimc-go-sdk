@@ -32,6 +32,15 @@ var acc1UUID = int64(10776577642332160)
 var appAccount2 string = "Bob"
 var acc2UUID = int64(10778725662851072)*/
 
+func TestPingPong(t *testing.T) {
+	statusHandler, tokenHandler, msgHandler := createHandlers(appAccount1)
+	mcUser := NewUser(appAccount1)
+	mcUser.RegisterStatusDelegate(statusHandler).RegisterTokenDelegate(tokenHandler).RegisterMessageDelegate(msgHandler).InitAndSetup()
+	mcUser.Login()
+	Sleep(20000)
+
+}
+
 func createHandlers(appAccount string) (*handler.StatusHandler, *handler.TokenHandler, *handler.MsgHandler) {
 	return handler.NewStatusHandler(), handler.NewTokenHandler(&httpUrl, &appKey, &appSecurt, &appAccount, &appId), handler.NewMsgHandler()
 }
@@ -161,7 +170,7 @@ func TestUnmarshalMIMCPacketWithEcnrypt(t *testing.T) {
 	bodyBins := byteutil.Copy(&packets, int(cnst.V6_HEAD_LENGTH), bodyLen)
 	crcBins := byteutil.Copy(&packets, int(cnst.V6_HEAD_LENGTH)+bodyLen, cnst.V6_CRC_LENGTH)
 
-	v6Packdet := packet.ParseBytesToPacket(&headerBins, &bodyBins, &crcBins, rc4Key, secKey)
+	v6Packdet := packet.ParseBytesToPacket(&headerBins, &bodyBins, &crcBins, &rc4Key, &secKey)
 
 	if v6Packdet == nil {
 		fmt.Printf("v6packet is nil.\n")
@@ -185,7 +194,7 @@ func TestPayloadKey(t *testing.T) {
 	val := "3"
 	value := []byte(val)
 	enVal := PayloadKey(key, value)
-	enVal1 := cipher.GenerateKeyForRC4(key, val)
+	enVal1 := cipher.GenerateKeyForRC4(&key, &val)
 
 	fmt.Printf("key: %v\nvalue: %v\nenVal: %v\nenVal: %v\n", []byte(key), value, enVal, enVal1)
 }

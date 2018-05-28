@@ -31,7 +31,7 @@ func NewV6Packet() *MIMCV6Packet {
 	packet := new(MIMCV6Packet)
 	return packet
 }
-func ParseBytesToPacket(headerBins, bodyBins, crcBins *[]byte, bodyKey []byte, secKey string) *MIMCV6Packet {
+func ParseBytesToPacket(headerBins, bodyBins, crcBins *[]byte, bodyKey *[]byte, secKey *string) *MIMCV6Packet {
 	v6BinsBuffer := new(bytes.Buffer)
 	v6BinsBuffer.Write(*headerBins)
 	v6BinsBuffer.Write(*bodyBins)
@@ -46,11 +46,11 @@ func ParseBytesToPacket(headerBins, bodyBins, crcBins *[]byte, bodyKey []byte, s
 	v6Packet := NewV6Packet()
 	v6Packet.magic = byteutil.GetUint16FromBytes(&v6Bins, cnst.V6_MAGIC_OFFSET)
 	v6Packet.version = byteutil.GetUint16FromBytes(&v6Bins, cnst.V6_VERSION_OFFSET)
-	if bodyKey != nil && len(bodyKey) > 0 && bodyBins != nil && len(*bodyBins) > 0 {
-		v6BodyBinsUnEn := cipher.Encrypt(bodyKey, *bodyBins)
+	if bodyKey != nil && len(*bodyKey) > 0 && bodyBins != nil && len(*bodyBins) > 0 {
+		v6BodyBinsUnEn := cipher.Encrypt(*bodyKey, *bodyBins)
 		bodyBins = &v6BodyBinsUnEn
 	}
-	if bodyBins == nil {
+	if len(*bodyBins) == 0 {
 		v6Packet.packetLen = 0
 		return v6Packet
 	} else {
@@ -74,7 +74,7 @@ func ParseBytesToPacket(headerBins, bodyBins, crcBins *[]byte, bodyKey []byte, s
 	}
 
 	if cnst.CMD_SECMSG == *(clientHeader.Cmd) {
-		payloadKey := cipher.GenerateKeyForRC4(secKey, *(clientHeader.Id))
+		payloadKey := cipher.GenerateKeyForRC4(secKey, clientHeader.Id)
 		payloadBytes = cipher.Encrypt(payloadKey, payloadBytes)
 	}
 	v6Packet.clientHeader = clientHeader
@@ -156,7 +156,6 @@ func (this *MIMCV6Packet) HeaderId() []byte {
 		return nil
 	}
 	logger.Debug("v6header: %v", this.clientHeader)
-	logger.Debug("v6header Id: %v", *(this.clientHeader.Id))
 	return []byte(*(this.clientHeader.Id))
 }
 

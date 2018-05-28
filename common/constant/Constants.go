@@ -39,7 +39,7 @@ const (
 	MIMC_METHOD string = "XIAOMI-PASS"
 	NO_KICK     string = "0"
 
-	PING_TIMEVAL_MS                 int64 = 15000
+	PING_TIMEVAL_MS                 int64 = 3000 //15s
 	CONNECT_TIMEOUT                 int64 = 5000
 	LOGIN_TIMEOUT                   int64 = 5000
 	CHECK_TIMEOUT_TIMEVAL_MS        int64 = 10000

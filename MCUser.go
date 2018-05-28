@@ -60,8 +60,9 @@ type MCUser struct {
 	statusDelegate StatusDelegate
 	msgDelegate    MessageHandlerDelegate
 
-	messageToSend *que.ConQueue
-	messageToAck  *cmap.ConMap
+	messageToSend    *que.ConQueue
+	messageToAck     *cmap.ConMap
+	packetToCallback *que.ConQueue
 }
 
 func NewUser(appAccount string) *MCUser {
@@ -100,6 +101,7 @@ func (this *MCUser) InitAndSetup() {
 	this.conn = NewConn().User(this)
 	this.messageToSend = que.NewConQueue()
 	this.messageToAck = cmap.NewConMap()
+	this.packetToCallback = que.NewConQueue()
 	this.appPackage = void
 	this.chid = 0
 	this.uuid = 0
@@ -113,6 +115,7 @@ func (this *MCUser) InitAndSetup() {
 	go this.sendRoutine()
 	go this.receiveRoutine()
 	go this.triggerRoutine()
+	go this.callBackRoutine()
 }
 
 func (this *MCUser) synchronizeResource() {
@@ -249,13 +252,14 @@ func (this *MCUser) sendRoutine() {
 			this.lastLoginTimestamp = CurrentTimeMillis()
 		}
 		if this.status == Online {
+
 			msgPacketToSend := this.messageToSend.Pop()
 			if msgPacketToSend == nil {
-				// 没有消息，检测ping
-				curTimeMillis := CurrentTimeMillis()
-				if curTimeMillis-this.lastLoginTimestamp > cnst.PING_TIMEVAL_MS {
+				dist := CurrentTimeMillis() - this.lastPingTimestamp
+				isPing := dist-cnst.PING_TIMEVAL_MS > 0
+				if isPing {
 					pkt = BuildPingPacket(this)
-					logger.Debug("build ping packet. %v")
+					logger.Info("build ping packet.")
 				} else {
 					Sleep(100)
 					continue
@@ -284,7 +288,6 @@ func (this *MCUser) sendRoutine() {
 		payloadKey := PayloadKey(this.securityKey, pkt.HeaderId())
 		bodyKey := this.conn.Rc4Key()
 		packetData := pkt.Bytes(bodyKey, payloadKey)
-
 		this.lastPingTimestamp = CurrentTimeMillis()
 		size := len(packetData)
 		if this.Conn().Writen(&packetData, size) != size {
@@ -340,21 +343,24 @@ func (this *MCUser) receiveRoutine() {
 			this.conn.Reset()
 			continue
 		}
-		bodyBins := make([]byte, bodyLen)
+		var bodyBins []byte
 		if bodyLen != 0 {
-			length = this.conn.Readn(&bodyBins, bodyLen)
-			if length != bodyLen {
-				logger.Error("[rcv]: error body.length: %v, bodyLen:%v", length, bodyLen)
-				this.conn.Reset()
-				continue
-			} else {
-				logger.Debug("[rcv]: read.length: %v, bodyLen:%v", length, bodyLen)
+			bodyBins = make([]byte, bodyLen)
+			if bodyLen != 0 {
+				length = this.conn.Readn(&bodyBins, bodyLen)
+				if length != bodyLen {
+					logger.Error("[rcv]: error body.length: %v, bodyLen:%v", length, bodyLen)
+					this.conn.Reset()
+					continue
+				} else {
+					//logger.Debug("[rcv]: read.length: %v, bodyLen:%v", length, bodyLen)
+				}
 			}
 		}
 		crcBins := make([]byte, cnst.V6_CRC_LENGTH)
-		logger.Debug("read crc")
+		//logger.Debug("read crc")
 		crclen := this.conn.Readn(&crcBins, cnst.V6_CRC_LENGTH)
-		logger.Debug("read crc len: %v", crclen)
+		//logger.Debug("read crc len: %v", crclen)
 		if crclen != cnst.V6_CRC_LENGTH {
 			logger.Error("[rcv]: error crc.\n")
 			this.conn.Reset()
@@ -362,14 +368,8 @@ func (this *MCUser) receiveRoutine() {
 		}
 		this.conn.ClearSockTimestamp()
 		bodyKey := this.conn.Rc4Key()
-		v6Pakcet := packet.ParseBytesToPacket(&headerBins, &bodyBins, &crcBins, bodyKey, this.securityKey)
-		if v6Pakcet == nil {
-			logger.Error("[rcv]: parse into v6Packet fail.")
-			this.conn.Reset()
-			continue
-		}
-		logger.Debug("[rcv]: get a packet.")
-		this.handleResponse(v6Pakcet)
+		packetBytes := packet.NewPacketBytes(&headerBins, &bodyBins, &crcBins, &bodyKey, &(this.securityKey))
+		this.packetToCallback.Push(packetBytes)
 	}
 }
 func (this *MCUser) triggerRoutine() {
@@ -386,6 +386,29 @@ func (this *MCUser) triggerRoutine() {
 		}
 		Sleep(200)
 		this.scanAndCallback()
+	}
+}
+
+func (this *MCUser) callBackRoutine() {
+	logger.Info("initiate callback goroutine.")
+	if this.conn == nil {
+		return
+	}
+	for {
+		pktByts := this.packetToCallback.Pop()
+		if pktByts != nil {
+			packetBytes := pktByts.(*packet.PacketBytes)
+			v6Packet := packet.ParseBytesToPacket(packetBytes.HeaderBins, packetBytes.BodyBins, packetBytes.CrcBins, packetBytes.BodyKey, packetBytes.SecKey)
+			if v6Packet == nil {
+				logger.Error("[rcv]: parse into v6Packet fail.")
+				this.conn.Reset()
+				continue
+			}
+			logger.Debug("[rcv]: get a packet.")
+			this.handleResponse(v6Packet)
+		} else {
+			Sleep(100)
+		}
 	}
 }
 
@@ -432,21 +455,25 @@ func (this *MCUser) scanAndCallback() {
 }
 
 func (this *MCUser) handleResponse(v6Packet *packet.MIMCV6Packet) {
+	if v6Packet.GetHeader() == nil {
+		logger.Info("[handle packet]get a pong packet.")
+		return
+	}
 	cmd := v6Packet.GetHeader().Cmd
 	if cnst.CMD_SECMSG == *cmd {
-		logger.Debug("[handleResponse] get a msg.")
+		logger.Debug("[handle packet] get a msg.")
 		this.handleSecMsg(v6Packet)
 	} else if cnst.CMD_CONN == *cmd {
-		logger.Debug("[handle] conn response.")
+		logger.Debug("[handle packet] conn response.")
 		connResp := new(XMMsgConnResp)
 		err := Deserialize(v6Packet.GetPayload(), connResp)
 		if !err {
-			logger.Error("[handle] parse connResp fail.")
+			logger.Error("[handle packet] parse connResp fail.")
 			this.conn.Reset()
 			return
 		}
 		this.conn.HandshakeConnected()
-		logger.Debug("[handle] handshake succ.")
+		logger.Debug("[handle packet] handshake succ.")
 		this.conn.SetChallenge(*(connResp.Challenge))
 		this.conn.SetChallengeAndRc4Key(*(connResp.Challenge))
 	} else if cnst.CMD_BIND == *cmd {
@@ -456,15 +483,15 @@ func (this *MCUser) handleResponse(v6Packet *packet.MIMCV6Packet) {
 			if *bindResp.Result {
 				this.status = Online
 				this.lastLoginTimestamp = 0
-				logger.Debug("[handle] login succ.")
+				logger.Debug("[handle packet] login succ.")
 			} else {
 
 				if cnst.MIMC_TOKEN_EXPIRE == *(bindResp.ErrorType) {
-					logger.Warn("[handle] token expired, relogin().")
+					logger.Warn("[handle packet] token expired, relogin().")
 					this.Login()
 				} else {
 					this.status = Offline
-					logger.Warn("[handle] login fail. %v", err)
+					logger.Warn("[handle packet] login fail. %v", err)
 				}
 
 			}
@@ -484,6 +511,7 @@ func (this *MCUser) handleResponse(v6Packet *packet.MIMCV6Packet) {
 			this.statusDelegate.HandleChange(false, &kick, &kick, &kick)
 		}
 	} else {
+		logger.Debug("cmd: %v", *cmd)
 		return
 	}
 }

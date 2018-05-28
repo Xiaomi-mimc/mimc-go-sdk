@@ -98,6 +98,8 @@ func BuildConnectionPacket(udid string, mcUser *MCUser) *packet.MIMCV6Packet {
 	os := "macOs"
 	xMMsgConn.Os = &os
 	xMMsgConn.Udid = &udid
+	sdk := int32(33)
+	xMMsgConn.Sdk = &sdk
 	version := cnst.CONN_BIN_PROTO_VERSION
 	xMMsgConn.Version = &version
 	v6Packet.PayloadType(cnst.PAYLOAD_TYPE)
