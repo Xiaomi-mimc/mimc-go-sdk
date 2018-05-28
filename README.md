@@ -25,7 +25,7 @@ MIMC-Go-SDK的源码已经上传到github中，开发者可以下载至本地GOP
 ### 下载源码
 ```sbtshell
     go get github.com/Xiaomi-mimc/mimc-go-sdk
-    cd $GOPATH/github.com/Xiaomi-mimc/mimc-go-sdk
+    cd $GOPATH/src/github.com/Xiaomi-mimc/mimc-go-sdk
     go build
     go install
 ```
@@ -36,7 +36,7 @@ MIMC-Go-SDK依赖proto buffer进行序列化与反序列化数据，在使用时
 ```sbtshell
     go get github.com/golang/protobuf/proto
     // 进入下载目录
-    cd $GOPATH/src/github.com/golang/protobuf/proto 
+    cd $GOPATH/src/github.com/golang/protobuf/proto
     // 编译安装
     go build
     go install
@@ -166,7 +166,7 @@ MCUser初始化以及启动读、写协程。
 ```
 发送群聊消息示例如下：
 ```golang
-    groupId := int64(123456789) 
+    groupId := int64(123456789)
     packetId := mcUser.SendMessage(&groupid, []byte("Are you OK?"))
 ```
 ## 接收消息
@@ -181,11 +181,11 @@ MCUser初始化以及启动读、写协程。
 消息回调的接口如下：
 ```golang
 type MessageHandlerDelegate interface {
-	HandleMessage(packets *list.List)
-	HandleGroupMessage(packets *list.List)
-	HandleServerAck(packetId *string, sequence, timestamp *int64)
-	HandleSendMessageTimeout(message *msg.P2PMessage)
-	HandleSendGroupMessageTimeout(message *msg.P2TMessage)
+    HandleMessage(packets *list.List)
+    HandleGroupMessage(packets *list.List)
+    HandleServerAck(packetId *string, sequence, timestamp *int64)
+    HandleSendMessageTimeout(message *msg.P2PMessage)
+    HandleSendGroupMessageTimeout(message *msg.P2TMessage)
 }
 ```
 在处理“接收单聊/群聊消息”、“单聊/群聊消息超时”以及“消息送达服务器”的业务逻辑时，开发者通过实现MessageHandlerDelegate接口的方法，并通过MCUser.RegisterMessageDelegate(msgDelegate MessageHandlerDelegate)方法实现**接收消息回调**的注册。
@@ -316,20 +316,20 @@ func createDelegates(appAccount *string) (*handler.StatusHandler, *handler.Token
     return handler.NewStatusHandler(), handler.NewTokenHandler(&httpUrl, &apppKey, &appSecurt, appAccount, &appId), handler.NewMsgHandler()
 }
 // 创建用户
-func createUser(appAccount *string) *user.MCUser {
+func createUser(appAccount *string) *mimc.MCUser {
     mcUser := mimc.NewUser(*appAccount)
     // 创建Token接口，StatusDelegate接口，MessageDelegate接口的实现类
     statusDelegate, tokenDelegate, msgDelegate := createDelegates(appAccount)
-    // 将三个实现类注册给用户
+    // 将三个实现类注册给用户，并启动用户内部读写协程
     mcUser.StatusDelegate(statusDelegate).TokenDelegate(tokenDelegate).MsgDelegate(msgDelegate).InitAndSetup()
     return mcUser
 }
 ```
 ### 登录、收发消息、退出
 ```golang
-// 创建用户
-    leijun := createUser(&appId, &appAccount1)
-    mifen := createUser(&appId, &appAccount2)
+    // 创建用户
+    leijun := createUser(&appAccount1)
+    mifen := createUser(&appAccount2)
 
     // 用户登录
     leijun.Login()
@@ -337,16 +337,9 @@ func createUser(appAccount *string) *user.MCUser {
     mimc.Sleep(3000)
 
     // 互发消息
-    leijun --> mifen
     leijun.SendMessage(appAccount2, []byte("Are you OK?"))
-    leijun.SendMessage(appAccount2, []byte("Are you Okay?"))
-    leijun.SendMessage(appAccount2, []byte("R U OK?"))
-    
-    mifen --> leijun
-    mifen.SendMessage(appAccount2, []byte("I am Fine. Thanks!"))
-    mifen.SendMessage(appAccount2, []byte("I'm Fine. Thanks!"))
-    mifen.SendMessage(appAccount2, []byte("i m fine. thx!"))
-    mimc.Sleep(3000)
+    mifen.SendMessage(appAccount1, []byte("I am Fine. Thanks!"))
+    mimc.Sleep(15000)
 
     // 用户退出
     leijun.Logout()

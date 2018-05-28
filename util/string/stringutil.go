@@ -127,7 +127,7 @@ func SynchrnizeResource(root, dir, file, key, value *string) *string {
 	rot := Substr(root, 0, strings.LastIndex(*root, "/"))
 	resourcePath := rot + *dir
 	resourceText := resourcePath + *file
-	fmt.Printf("rot:%v, pat:%v, text:%v\n", rot, resourcePath, resourceText)
+	//fmt.Printf("rot:%v, pat:%v, text:%v\n", rot, resourcePath, resourceText)
 	result, _ := PathExists(&resourcePath)
 	if result {
 		result, _ = PathExists(&resourceText)
