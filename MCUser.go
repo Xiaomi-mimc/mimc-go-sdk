@@ -433,7 +433,7 @@ func (this *MCUser) scanAndCallback() {
 			if !err {
 				return
 			}
-			p2pMsg := msg.NewP2pMsg(mimcPacket.PacketId, p2pMessage.From.AppAccount, p2pMessage.From.Resource, mimcPacket.Sequence, mimcPacket.Timestamp, p2pMessage.Payload)
+			p2pMsg := msg.NewP2pMsg(mimcPacket.PacketId, p2pMessage.From.AppAccount, p2pMessage.To.AppAccount, mimcPacket.Sequence, mimcPacket.Timestamp, p2pMessage.Payload)
 			this.msgDelegate.HandleSendMessageTimeout(p2pMsg)
 		} else if *(mimcPacket.Type) == MIMC_MSG_TYPE_P2T_MESSAGE {
 			p2tMessage := new(MIMCP2TMessage)
@@ -441,7 +441,7 @@ func (this *MCUser) scanAndCallback() {
 			if !err {
 				return
 			}
-			p2tMsg := msg.NewP2tMsg(mimcPacket.PacketId, p2tMessage.From.AppAccount, p2tMessage.From.Resource, mimcPacket.Sequence, mimcPacket.Timestamp, p2tMessage.To.TopicId, p2tMessage.Payload)
+			p2tMsg := msg.NewP2tMsg(mimcPacket.PacketId, p2tMessage.From.AppAccount, mimcPacket.Sequence, mimcPacket.Timestamp, p2tMessage.To.TopicId, p2tMessage.Payload)
 			this.msgDelegate.HandleSendGroupMessageTimeout(p2tMsg)
 		}
 		timeoutKeys.PushBack(key)
