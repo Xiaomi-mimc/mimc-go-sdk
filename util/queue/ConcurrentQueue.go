@@ -37,3 +37,9 @@ func (this *ConQueue) Pop() interface{} {
 	this.size -= 1
 	return head.Value
 }
+
+func (this *ConQueue) Size() uint32 {
+	this.mu.Lock()
+	defer this.mu.Unlock()
+	return this.size
+}

@@ -58,4 +58,7 @@ const (
 
 	TOKEN_IP_ONLINE  string = "mimc.chat.xiaomi.net/api/account/token"
 	TOKEN_IP_STAGING string = "10.38.162.149"
+
+	CACHE_DIR  string = "/attach/"
+	CACHE_FILE string = ".userInfo"
 )

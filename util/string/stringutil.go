@@ -123,7 +123,7 @@ func PathExists(path *string) (bool, error) {
 	return false, err
 }
 
-func SynchrnizeResource(root, dir, file, key, value *string) *string {
+func SynchronizeResource(root, dir, file, key, value *string) *string {
 	rot := Substr(root, 0, strings.LastIndex(*root, "/"))
 	resourcePath := rot + *dir
 	resourceText := resourcePath + *file
@@ -143,10 +143,10 @@ func SynchrnizeResource(root, dir, file, key, value *string) *string {
 			panic("can not create dir.")
 		}
 	}
-	return SynchrnizeWithFile(key, value, &resourceText)
+	return SynchronizeWithFile(key, value, &resourceText)
 }
 
-func SynchrnizeWithFile(key, value, file *string) *string {
+func SynchronizeWithFile(key, value, file *string) *string {
 	f, err := os.OpenFile(*file, os.O_RDWR, 0666)
 	defer f.Close()
 	if err != nil {
