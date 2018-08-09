@@ -93,6 +93,9 @@ func (this *MIMCConnection) Udid() string {
 }
 
 func (this *MIMCConnection) Reset() {
+	if this.status == NOT_CONNECTED {
+		return
+	}
 	if this.user != nil {
 		this.user.status = Offline
 	}
@@ -203,9 +206,6 @@ func (this *MIMCConnection) init() {
 	this.lastPingTimestamp = 0
 	this.nextResetSockTimestamp = -1
 	this.tryCreateConnCount = 0
-	if this.user != nil {
-		this.user = nil
-	}
 	this.peerFetcher = NewPeerFetcher()
 
 }
