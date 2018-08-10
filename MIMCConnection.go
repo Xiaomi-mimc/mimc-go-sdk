@@ -130,10 +130,9 @@ func (this *MIMCConnection) Readn(buf *[]byte, length int) int {
 		logger.Warn("check: buf len %v != length %v", len(*buf), length)
 		return -1
 	}
-	left := length
-	// 每次声明一个数组，按照这个数组去读conn，然后将其拷贝至buf
-	tmpBuf := make([]byte, left)
+	left := length	
 	for left > 0 {
+		tmpBuf := make([]byte, left)
 		nread, err := this.tcpConn.Read(tmpBuf)
 		if err != nil || nread < 0 {
 			logger.Error("read error. err: %v, nread: %v, length: %v", err, nread, length)
