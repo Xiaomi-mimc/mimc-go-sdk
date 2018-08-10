@@ -58,9 +58,8 @@ func ConcatStrs(strs ...*string) string {
 func RandomStrWithLength(size int) string {
 	randomStr := make([]rune, size)
 	length := len(letters)
-
+	rand.Seed(time.Now().UnixNano())
 	for i := range randomStr {
-		rand.Seed(time.Now().UnixNano())
 		randomStr[i] = letters[rand.Intn(length)]
 	}
 	return string(randomStr)

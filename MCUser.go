@@ -208,7 +208,7 @@ func (this *MCUser) SendMessage(toAppAccount string, msgByte []byte) string {
 	if &toAppAccount == nil || msgByte == nil || len(msgByte) == 0 {
 		return ""
 	}
-	//logger.Info("[Send P2P Msg]%v -> %v: %v.\n", this.appAccount, toAppAccount, string(msgByte))
+	logger.Info("[Send P2P Msg]%v -> %v: %v.\n", this.appAccount, toAppAccount, string(msgByte))
 	v6Packet, mimcPacket := BuildP2PMessagePacket(this, toAppAccount, msgByte, true)
 	timeoutPacket := packet.NewTimeoutPacket(CurrentTimeMillis(), mimcPacket)
 	msgPacket := msg.NewMsgPacket(cnst.MIMC_C2S_DOUBLE_DIRECTION, v6Packet)
@@ -222,7 +222,7 @@ func (this *MCUser) SendGroupMessage(topicId *int64, msgByte []byte) string {
 	if &topicId == nil || msgByte == nil || len(msgByte) == 0 {
 		return ""
 	}
-	//logger.Info("[Send P2T Msg]%v send p2t msg to %v: %v.\n", this.appAccount, *topicId, string(msgByte))
+	logger.Info("[Send P2T Msg]%v send p2t msg to %v: %v.\n", this.appAccount, *topicId, string(msgByte))
 	v6Packet, mimcPacket := BuildP2TMessagePacket(this, *topicId, msgByte, true)
 	timeoutPacket := packet.NewTimeoutPacket(CurrentTimeMillis(), mimcPacket)
 	msgPacket := msg.NewMsgPacket(cnst.MIMC_C2S_DOUBLE_DIRECTION, v6Packet)
@@ -254,7 +254,7 @@ func (this *MCUser) sendRoutine() {
 			}
 			this.conn.Sock_Connected()
 			this.lastCreateConnTimestamp = 0
-			logger.Debug("build conn packet.")
+			logger.Info("%v: build conn packet.", this.appAccount)
 			pkt = BuildConnectionPacket(this.conn.Udid(), this)
 		}
 		if this.conn.Status() == SOCK_CONNECTED {
@@ -267,7 +267,7 @@ func (this *MCUser) sendRoutine() {
 				continue
 			}
 			if this.status == Offline && currTimeMillis-this.lastLoginTimestamp > cnst.LOGIN_TIMEOUT {
-				logger.Debug("build bind packet.")
+				logger.Debug("%v: build bind packet.", this.appAccount)
 				pkt = BuildBindPacket(this)
 				if pkt == nil {
 					Sleep(100)
@@ -284,7 +284,7 @@ func (this *MCUser) sendRoutine() {
 				isPing := dist-cnst.PING_TIMEVAL_MS > 0
 				if isPing {
 					pkt = BuildPingPacket(this)
-					logger.Info("build ping packet.")
+					logger.Info("%v: build ping packet.", this.appAccount)
 				} else {
 					Sleep(100)
 					continue
@@ -293,7 +293,7 @@ func (this *MCUser) sendRoutine() {
 				msgPacket := msgPacketToSend.(*msg.MsgPacket)
 				msgType = msgPacket.MsgType()
 				pkt = msgPacket.Packet()
-				logger.Debug("send msg packet.")
+				logger.Debug("%v: send msg packet.", this.appAccount)
 
 			}
 
@@ -345,7 +345,7 @@ func (this *MCUser) receiveRoutine() {
 		headerBins := make([]byte, cnst.V6_HEAD_LENGTH)
 		length := this.conn.Readn(&headerBins, int(cnst.V6_HEAD_LENGTH))
 		if length != int(cnst.V6_HEAD_LENGTH) {
-			logger.Error("[rcv]: error head. need length: %v, read lenght: %v\n", cnst.V6_HEAD_LENGTH, length)
+			logger.Error("%v->[rcv]: error head. need length: %v, read length: %v\n", this.appAccount, cnst.V6_HEAD_LENGTH, length)
 			this.conn.Reset()
 			Sleep(1000)
 			continue
@@ -353,19 +353,19 @@ func (this *MCUser) receiveRoutine() {
 		}
 		magic := byteutil.GetUint16FromBytes(&headerBins, cnst.V6_MAGIC_OFFSET)
 		if magic != cnst.MAGIC {
-			logger.Error("[rcv]: error magic.\n")
+			logger.Error("%v->[rcv]: error magic: %v.", this.appAccount, magic)
 			this.conn.Reset()
 			continue
 		}
 		version := byteutil.GetUint16FromBytes(&headerBins, cnst.V6_VERSION_OFFSET)
 		if version != cnst.V6_VERSION {
-			logger.Error("[rcv]: error version.\n")
+			logger.Error("%v->[rcv]: error version: %v.", this.appAccount, version)
 			this.conn.Reset()
 			continue
 		}
 		bodyLen := byteutil.GetIntFromBytes(&headerBins, cnst.V6_BODYLEN_OFFSET)
 		if bodyLen < 0 {
-			logger.Error("[rcv]: error bodylen.\n")
+			logger.Error("%v->[rcv]: error bodylen: %v.", this.appAccount, bodyLen)
 			this.conn.Reset()
 			continue
 		}
@@ -375,7 +375,7 @@ func (this *MCUser) receiveRoutine() {
 			if bodyLen != 0 {
 				length = this.conn.Readn(&bodyBins, bodyLen)
 				if length != bodyLen {
-					logger.Error("[rcv]: error body.length: %v, bodyLen:%v", length, bodyLen)
+					logger.Error("%v->[rcv]: error body.length: %v, bodyLen:%v", this.appAccount, length, bodyLen)
 					this.conn.Reset()
 					continue
 				} else {
@@ -386,7 +386,7 @@ func (this *MCUser) receiveRoutine() {
 		crcBins := make([]byte, cnst.V6_CRC_LENGTH)
 		crclen := this.conn.Readn(&crcBins, cnst.V6_CRC_LENGTH)
 		if crclen != cnst.V6_CRC_LENGTH {
-			logger.Error("[rcv]: error crc.\n")
+			logger.Error("%v->[rcv]: error crc: %v.", this.appAccount, crclen)
 			this.conn.Reset()
 			continue
 		}

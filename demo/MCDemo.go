@@ -34,16 +34,17 @@ func main() {
 
 	// 互发消息
 	leijun.SendMessage(appAccount2, []byte("1"))
+	mimc.Sleep(20000)
 	mifen.SendMessage(appAccount1, []byte("2"))
 	//leijun.SendMessage(appAccount2, []byte("3"))
 	//mifen.SendMessage(appAccount1, []byte("4"))
-	mimc.Sleep(6000)
+	mimc.Sleep(30000)
 
 	// 用户退出
 	leijun.Logout()
 	mifen.Logout()
 
-	mimc.Sleep(2000)
+	mimc.Sleep(10000)
 }
 
 // 创建用户
