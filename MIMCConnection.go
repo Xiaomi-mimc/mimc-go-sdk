@@ -131,14 +131,19 @@ func (this *MIMCConnection) Readn(buf *[]byte, length int) int {
 		return -1
 	}
 	left := length
+	// 每次声明一个数组，按照这个数组去读conn，然后将其拷贝至buf
+	tmpBuf := make([]byte, left)
 	for left > 0 {
-		nread, err := this.tcpConn.Read(*buf)
+		nread, err := this.tcpConn.Read(tmpBuf)
 		if err != nil || nread < 0 {
-			logger.Error("read error. err: %v, nread: %v, length: ", err, nread, length)
+			logger.Error("read error. err: %v, nread: %v, length: %v", err, nread, length)
 			return -1
 		}
 		if nread == 0 {
 			break
+		}
+		for i:=0; i < nread; i++ {
+			(*buf)[length - left + i] = tmpBuf[i]
 		}
 		left = left - nread
 		if left < 0 {
@@ -152,10 +157,14 @@ func (this *MIMCConnection) Writen(buf *[]byte, length int) int {
 	if !this.check(buf, length) {
 		return -1
 	}
-
 	left := length
+	var tmpBuf []byte
 	for left > 0 {
-		nwrite, err := this.tcpConn.Write(*buf)
+		tmpBuf = make([]byte, left)
+		for i := 0; i < left; i++ {
+			tmpBuf[i] = (*buf)[length - left + i]
+		}
+		nwrite, err := this.tcpConn.Write(tmpBuf)
 		if err != nil || nwrite < 0 {
 			logger.Error("write error.")
 			return -1
@@ -165,6 +174,7 @@ func (this *MIMCConnection) Writen(buf *[]byte, length int) int {
 		}
 		left = left - nwrite
 	}
+	//logger.Info("writen: %v", (length - left))
 	return length - left
 
 }

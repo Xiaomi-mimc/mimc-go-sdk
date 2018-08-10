@@ -191,6 +191,7 @@ func (this *MCUser) Login() bool {
 	if result {
 		this.synchronizeResource()
 	}
+	this.tryLogin = true
 	return result
 
 }
@@ -201,6 +202,7 @@ func (this *MCUser) Logout() bool {
 	v6PacketForUnbind := BuildUnBindPacket(this)
 	unBindPacket := msg.NewMsgPacket(cnst.MIMC_C2S_DOUBLE_DIRECTION, v6PacketForUnbind)
 	this.messageToSend.Push(unBindPacket)
+	this.tryLogin = false
 	return true
 }
 
@@ -266,7 +268,7 @@ func (this *MCUser) sendRoutine() {
 				Sleep(100)
 				continue
 			}
-			if this.status == Offline && currTimeMillis-this.lastLoginTimestamp > cnst.LOGIN_TIMEOUT {
+			if this.tryLogin && this.status == Offline && currTimeMillis-this.lastLoginTimestamp > cnst.LOGIN_TIMEOUT {
 				logger.Debug("%v: build bind packet.", this.appAccount)
 				pkt = BuildBindPacket(this)
 				if pkt == nil {
@@ -298,10 +300,10 @@ func (this *MCUser) sendRoutine() {
 			}
 
 		} else {
-			if this.tryLogin {
+			/*if this.tryLogin {
 				this.Login()
 				Sleep(100)
-			}
+			}*/
 		}
 		if pkt == nil {
 			Sleep(100)

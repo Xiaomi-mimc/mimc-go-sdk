@@ -33,11 +33,11 @@ func main() {
 	mimc.Sleep(3000)
 
 	// 互发消息
-	leijun.SendMessage(appAccount2, []byte("1"))
+	leijun.SendMessage(appAccount2, []byte("1111111111111111111111111111111111111111111111111111111111111"))
 	mimc.Sleep(20000)
 	mifen.SendMessage(appAccount1, []byte("2"))
-	//leijun.SendMessage(appAccount2, []byte("3"))
-	//mifen.SendMessage(appAccount1, []byte("4"))
+	leijun.SendMessage(appAccount2, []byte("3"))
+	mifen.SendMessage(appAccount1, []byte("4"))
 	mimc.Sleep(30000)
 
 	// 用户退出
