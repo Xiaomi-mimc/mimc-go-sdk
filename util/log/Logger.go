@@ -4,6 +4,7 @@ import (
 	"fmt"
 	syslog "log"
 	"os"
+	"sync"
 )
 
 type LogLevel int
@@ -22,10 +23,39 @@ type Logger struct {
 	log   *syslog.Logger
 }
 
-func GetDefaultLogger() *Logger {
-	return GetLogger(InfoLevel)
+var lock sync.Mutex
+var level = InfoLevel
+var log *Logger = nil
+var logPath = "./mimc.log"
+
+func SetLogPath(path string) {
+	logPath = path
 }
-func GetLogger(level LogLevel) *Logger {
+func SetLogLevel(lvl LogLevel) {
+	level = lvl
+}
+
+func GetLogger() *Logger {
+	if log == nil {
+		lock.Lock()
+		if log == nil {
+			log = new(Logger)
+			logFile, err := os.OpenFile(logPath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0766)
+			if nil != err {
+				panic(err)
+			}
+			log.level = level
+			log.log = syslog.New(logFile, "\r\n", syslog.Ldate|syslog.Ltime|syslog.Lshortfile)
+		}
+		lock.Unlock()
+	}
+	return log
+}
+
+func GetDefaultLogger() *Logger {
+	return GetLogger1(InfoLevel)
+}
+func GetLogger1(level LogLevel) *Logger {
 	logger := new(Logger)
 	logger.log = syslog.New(os.Stdout, "\r\n", syslog.Ldate|syslog.Ltime|syslog.Lshortfile)
 	logger.level = level

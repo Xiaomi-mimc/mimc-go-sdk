@@ -10,7 +10,7 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-var logger *log.Logger = log.GetLogger(log.InfoLevel)
+var logger *log.Logger = log.GetLogger()
 
 type MIMCV6Packet struct {
 	magic     uint16

@@ -10,7 +10,7 @@ import (
 type MsgHandler struct {
 }
 
-var logger *log.Logger = log.GetLogger(log.InfoLevel)
+var logger *log.Logger = log.GetLogger()
 
 func NewMsgHandler() *MsgHandler {
 	return &MsgHandler{}

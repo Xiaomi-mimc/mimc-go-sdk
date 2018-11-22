@@ -21,6 +21,8 @@ var appKey string = "5361761377988"
 var appSecurt string = "2SZbrJOAL1xHRKb7L9AiRQ=="
 var appAccount1 string = "Alice"
 var appAccount2 string = "Bob"
+var appAccount3 string = "push_test0"
+var appAccount4 string = "push_test1"
 
 /*// staging
 var httpUrl string = "http://10.38.162.149/api/account/token"
@@ -31,6 +33,26 @@ var appAccount1 string = "Alice"
 var acc1UUID = int64(10776577642332160)
 var appAccount2 string = "Bob"
 var acc2UUID = int64(10778725662851072)*/
+
+func TestLogin(t *testing.T) {
+	statusHandler, tokenHandler, msgHandler := createHandlers(appAccount4)
+	mcUser1 := NewUser(appAccount4)
+	mcUser1.RegisterStatusDelegate(statusHandler).RegisterTokenDelegate(tokenHandler).RegisterMessageDelegate(msgHandler).InitAndSetup()
+	mcUser1.Login()
+
+	topicId := int64(14054314151064593)
+	for i := 0; i < 10; i++ {
+		mcUser1.SendGroupMessage(&topicId, []byte(string("1")))
+	}
+
+	/*statusHandler1, tokenHandler1, msgHandler1 := createHandlers(appAccount4)
+	mcUser2 := NewUser(appAccount4)
+	mcUser2.RegisterStatusDelegate(statusHandler1).RegisterTokenDelegate(tokenHandler1).RegisterMessageDelegate(msgHandler1).InitAndSetup()
+	mcUser2.Login()*/
+
+	Sleep(100000)
+
+}
 
 func TestPingPong(t *testing.T) {
 	statusHandler, tokenHandler, msgHandler := createHandlers(appAccount1)

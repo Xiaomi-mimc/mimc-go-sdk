@@ -21,7 +21,7 @@ import (
 
 type UserStatus int
 
-var logger *log.Logger = log.GetLogger(log.InfoLevel)
+var logger *log.Logger = log.GetLogger()
 
 const (
 	Online UserStatus = iota
@@ -396,7 +396,6 @@ func (this *MCUser) receiveRoutine() {
 		bodyKey := this.conn.Rc4Key()
 		packetBytes := packet.NewPacketBytes(&headerBins, &bodyBins, &crcBins, &bodyKey, &(this.securityKey))
 		counter += 1
-		logger.Info("%v recv packets: %v", this.appAccount, counter)
 		this.packetToCallback.Push(packetBytes)
 	}
 }
@@ -490,7 +489,6 @@ func (this *MCUser) handleResponse(v6Packet *packet.MIMCV6Packet) {
 	}
 	cmd := v6Packet.GetHeader().Cmd
 	if cnst.CMD_SECMSG == *cmd {
-		//logger.Info("[handle packet] get a msg.")
 		this.handleSecMsg(v6Packet)
 	} else if cnst.CMD_CONN == *cmd {
 		logger.Debug("[handle packet] conn response.")
