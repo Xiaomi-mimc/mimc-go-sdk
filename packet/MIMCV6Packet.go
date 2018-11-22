@@ -10,7 +10,7 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-var logger *log.Logger = log.GetLogger()
+var logger *log.Logger
 
 type MIMCV6Packet struct {
 	magic     uint16
@@ -29,6 +29,7 @@ type MIMCV6Packet struct {
 
 func NewV6Packet() *MIMCV6Packet {
 	packet := new(MIMCV6Packet)
+	logger = log.GetLogger()
 	return packet
 }
 func ParseBytesToPacket(headerBins, bodyBins, crcBins *[]byte, bodyKey *[]byte, secKey *string) *MIMCV6Packet {

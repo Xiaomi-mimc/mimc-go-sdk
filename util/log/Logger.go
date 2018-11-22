@@ -33,6 +33,7 @@ func SetLogPath(path string) {
 }
 func SetLogLevel(lvl LogLevel) {
 	level = lvl
+	fmt.Printf("setLogLevel: %d, %d\n", level, lvl)
 }
 
 func GetLogger() *Logger {
@@ -45,21 +46,12 @@ func GetLogger() *Logger {
 				panic(err)
 			}
 			log.level = level
+			fmt.Printf("GetLogger: %d, %d\n", level, level)
 			log.log = syslog.New(logFile, "\r\n", syslog.Ldate|syslog.Ltime|syslog.Lshortfile)
 		}
 		lock.Unlock()
 	}
 	return log
-}
-
-func GetDefaultLogger() *Logger {
-	return GetLogger1(InfoLevel)
-}
-func GetLogger1(level LogLevel) *Logger {
-	logger := new(Logger)
-	logger.log = syslog.New(os.Stdout, "\r\n", syslog.Ldate|syslog.Ltime|syslog.Lshortfile)
-	logger.level = level
-	return logger
 }
 
 func (this *Logger) Info(format string, args ...interface{}) {

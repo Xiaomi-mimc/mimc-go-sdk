@@ -21,12 +21,16 @@ import (
 
 type UserStatus int
 
-var logger *log.Logger = log.GetLogger()
+var logger *log.Logger
 
 const (
 	Online UserStatus = iota
 	Offline
 )
+
+func init() {
+
+}
 
 type MCUser struct {
 	chid     float64
@@ -66,6 +70,7 @@ type MCUser struct {
 }
 
 func NewUser(appAccount string) *MCUser {
+	logger = log.GetLogger()
 	this := NewMCUser()
 	this.appAccount = appAccount
 	return this

@@ -107,7 +107,7 @@ func (this *MIMCConnection) Reset() {
 	this.user.lastCreateConnTimestamp = 0
 	network_error := "NETWORK_ERROR"
 	this.user.status = Offline
-	this.user.statusDelegate.HandleChange(false,&network_error,&network_error,&network_error)
+	this.user.statusDelegate.HandleChange(false, &network_error, &network_error, &network_error)
 	this.init()
 }
 
@@ -130,7 +130,7 @@ func (this *MIMCConnection) Readn(buf *[]byte, length int) int {
 		logger.Warn("check: buf len %v != length %v", len(*buf), length)
 		return -1
 	}
-	left := length	
+	left := length
 	for left > 0 {
 		tmpBuf := make([]byte, left)
 		nread, err := this.tcpConn.Read(tmpBuf)
@@ -141,8 +141,8 @@ func (this *MIMCConnection) Readn(buf *[]byte, length int) int {
 		if nread == 0 {
 			break
 		}
-		for i:=0; i < nread; i++ {
-			(*buf)[length - left + i] = tmpBuf[i]
+		for i := 0; i < nread; i++ {
+			(*buf)[length-left+i] = tmpBuf[i]
 		}
 		left = left - nread
 		if left < 0 {
@@ -161,7 +161,7 @@ func (this *MIMCConnection) Writen(buf *[]byte, length int) int {
 	for left > 0 {
 		tmpBuf = make([]byte, left)
 		for i := 0; i < left; i++ {
-			tmpBuf[i] = (*buf)[length - left + i]
+			tmpBuf[i] = (*buf)[length-left+i]
 		}
 		nwrite, err := this.tcpConn.Write(tmpBuf)
 		if err != nil || nwrite < 0 {

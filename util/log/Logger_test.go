@@ -5,7 +5,8 @@ import (
 )
 
 func TestInfoLogger(test *testing.T) {
-	logger := GetLogger(InfoLevel)
+	SetLogLevel(WarnLevel)
+	logger := GetLogger()
 	logger.Info("%s.\n", "hello world")
 	logger.Info("%s.\n", "hello world1")
 	logger.Warn("%s.\n", "hello world2")

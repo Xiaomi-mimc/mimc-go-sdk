@@ -10,9 +10,10 @@ import (
 type MsgHandler struct {
 }
 
-var logger *log.Logger = log.GetLogger()
+var logger *log.Logger
 
 func NewMsgHandler() *MsgHandler {
+	logger = log.GetLogger()
 	return &MsgHandler{}
 }
 

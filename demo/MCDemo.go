@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/Xiaomi-mimc/mimc-go-sdk"
 	"github.com/Xiaomi-mimc/mimc-go-sdk/demo/handler"
+	"github.com/Xiaomi-mimc/mimc-go-sdk/util/log"
 )
 
 /**
@@ -22,7 +23,14 @@ var acc1UUID = int64(10776577642332160)
 var appAccount2 string = "t12"
 var acc2UUID = int64(10778725662851072)
 
+func init() {
+
+	log.SetLogLevel(log.InfoLevel)
+	log.SetLogPath("./mimc_demo.log")
+}
+
 func main() {
+
 	// 创建用户
 	leijun := createUser(&appAccount1)
 	mifen := createUser(&appAccount2)
