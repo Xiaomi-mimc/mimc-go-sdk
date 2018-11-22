@@ -4,6 +4,7 @@ import (
 	"github.com/Xiaomi-mimc/mimc-go-sdk"
 	"github.com/Xiaomi-mimc/mimc-go-sdk/demo/handler"
 	"github.com/Xiaomi-mimc/mimc-go-sdk/util/log"
+	"time"
 )
 
 /**
@@ -39,20 +40,28 @@ func main() {
 	leijun.Login()
 	mifen.Login()
 	mimc.Sleep(3000)
+	counter := 0
+	now := time.Now().Unix()
+	var interval int64 = 60 * 60 * 1 // 1h
+	//var interval int64 = 60 // 1 minute
 
-	// 互发消息
-	leijun.SendMessage(appAccount2, []byte("1111111111111111111111111111111111111111111111111111111111111"))
-	mimc.Sleep(20000)
-	mifen.SendMessage(appAccount1, []byte("2"))
-	leijun.SendMessage(appAccount2, []byte("3"))
-	mifen.SendMessage(appAccount1, []byte("4"))
-	mimc.Sleep(30000)
+	for nowing := now; nowing-now < interval; {
+		// 互发消息
+		leijun.SendMessage(appAccount2, []byte("123"))
+		mifen.SendMessage(appAccount1, []byte("456"))
+		nowing = time.Now().Unix()
+		counter = counter + 1
+	}
+
+	log.GetLogger().Info("send %d times.", counter)
+	mimc.Sleep(5000)
 
 	// 用户退出
 	leijun.Logout()
 	mifen.Logout()
 
-	mimc.Sleep(10000)
+	mimc.Sleep(1000)
+
 }
 
 // 创建用户
