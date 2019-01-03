@@ -93,6 +93,7 @@ func (this *MIMCConnection) Udid() string {
 }
 
 func (this *MIMCConnection) Reset() {
+
 	if this.status == NOT_CONNECTED {
 		return
 	}
@@ -103,24 +104,30 @@ func (this *MIMCConnection) Reset() {
 	if this.tcpConn != nil {
 		this.tcpConn.Close()
 	}
-	logger.Info("reset conn.")
 	this.user.lastCreateConnTimestamp = 0
 	network_error := "NETWORK_ERROR"
 	this.user.status = Offline
 	this.user.statusDelegate.HandleChange(false, &network_error, &network_error, &network_error)
 	this.init()
+
 }
 
 func (this *MIMCConnection) Connect() bool {
-	if this.peerFetcher == nil {
-		logger.Warn("peerFetcher is nil.")
-		return false
+
+	feAddrs := this.user.FeAddress()
+	if feAddrs == nil {
+		if this.user.refreshToken() {
+			feAddrs = this.user.FeAddress()
+		} else {
+			logger.Info("%s fresh token failed", this.user.AppAccount())
+		}
 	}
-	this.peer = this.peerFetcher.FetchPeer()
-	conn, err := net.Dial("tcp", this.peer.ToString())
-	if err == nil {
-		this.tcpConn = conn
-		return true
+	for _, addr := range feAddrs {
+		conn, err := net.Dial("tcp", addr)
+		if err == nil {
+			this.tcpConn = conn
+			return true
+		}
 	}
 	return false
 }
@@ -213,6 +220,6 @@ func (this *MIMCConnection) init() {
 	this.lastPingTimestamp = 0
 	this.nextResetSockTimestamp = -1
 	this.tryCreateConnCount = 0
-	this.peerFetcher = NewPeerFetcher()
+	//this.peerFetcher = NewPeerFetcher()
 
 }

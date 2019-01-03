@@ -18,7 +18,7 @@ func Generate() *string {
 			idGenerator = &IdGenerator{}
 		}
 	}
-	id := strutil.RandomStrWithLength(10) + "_" + *(idGenerator.generate())
+	id := "mimc_go_" + strutil.RandomStrWithLength(10) + "_" + *(idGenerator.generate())
 	return &id
 }
 

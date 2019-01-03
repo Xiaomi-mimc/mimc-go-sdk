@@ -4,7 +4,9 @@ import (
 	"fmt"
 	syslog "log"
 	"os"
+	"strconv"
 	"sync"
+	"time"
 )
 
 type LogLevel int
@@ -33,7 +35,6 @@ func SetLogPath(path string) {
 }
 func SetLogLevel(lvl LogLevel) {
 	level = lvl
-	fmt.Printf("setLogLevel: %d, %d\n", level, lvl)
 }
 
 func GetLogger() *Logger {
@@ -46,7 +47,6 @@ func GetLogger() *Logger {
 				panic(err)
 			}
 			log.level = level
-			fmt.Printf("GetLogger: %d, %d\n", level, level)
 			log.log = syslog.New(logFile, "\r\n", syslog.Ldate|syslog.Ltime|syslog.Lshortfile)
 		}
 		lock.Unlock()
@@ -58,6 +58,7 @@ func (this *Logger) Info(format string, args ...interface{}) {
 	if this.level <= InfoLevel {
 		this.log.SetPrefix("[info] ")
 		this.log.Output(2, fmt.Sprintf(format, args...))
+		fmt.Printf("["+currTime()+"] "+format+"\n", args...)
 	}
 }
 
@@ -65,6 +66,7 @@ func (this *Logger) Debug(format string, args ...interface{}) {
 	if this.level <= DebugLevel {
 		this.log.SetPrefix("[debug]")
 		this.log.Output(2, fmt.Sprintf(format, args...))
+		fmt.Printf("["+currTime()+"] "+format+"\n", args...)
 	}
 }
 
@@ -72,6 +74,7 @@ func (this *Logger) Warn(format string, args ...interface{}) {
 	if this.level <= WarnLevel {
 		this.log.SetPrefix("[warn]")
 		this.log.Output(2, fmt.Sprintf(format, args...))
+		fmt.Printf("["+currTime()+"] "+format+"\n", args...)
 	}
 }
 
@@ -79,5 +82,14 @@ func (this *Logger) Error(format string, args ...interface{}) {
 	if this.level <= ErrorLevel {
 		this.log.SetPrefix("[error]")
 		this.log.Output(2, fmt.Sprintf(format, args...))
+		fmt.Printf("["+currTime()+"] "+format+"\n", args...)
 	}
+}
+
+func currTime() string {
+	now := time.Now()
+	const base_format = "2006-01-02 15:04:05"
+	nsecStr := strconv.Itoa(now.Nanosecond())
+	timeStr := now.Format(base_format) + "." + nsecStr[0:4]
+	return timeStr
 }

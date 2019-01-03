@@ -11,18 +11,18 @@ type Token interface {
 
 type StatusDelegate interface {
 	/**
-	 * @param[isOnline bool] true: 在线，false：离线
+	 * @param[status bool] 在线true；离线false
 	 * @param[errType *string] 登录失败类型
 	 * @param[errReason *string] 登录失败原因
-	 * @param[errDescription *string] 登录失败原因描述
+	 * @param[errDec *string] 登录失败原因描述
 	 */
-	HandleChange(isOnline bool, errType, errReason, errDescription *string)
+	HandleChange(status bool, errType, errReason, errDec *string)
 }
 
 type MessageHandlerDelegate interface {
 	HandleMessage(packets *list.List)
 	HandleGroupMessage(packets *list.List)
-	HandleServerAck(packetId *string, sequence, timestamp *int64)
+	HandleServerAck(packetId *string, sequence, timestamp *int64, errMsg *string)
 	HandleSendMessageTimeout(message *msg.P2PMessage)
 	HandleSendGroupMessageTimeout(message *msg.P2TMessage)
 }

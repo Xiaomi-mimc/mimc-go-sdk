@@ -6,10 +6,11 @@ type P2PMessage struct {
 	timestamp   *int64
 	fromAccount *string
 	toAccount   *string
+	bizType     *string
 	payload     []byte
 }
 
-func NewP2pMsg(packetId, fromAccount, toAccount *string, sequence, timestamp *int64, payload []byte) *P2PMessage {
+func NewP2pMsg(packetId, fromAccount, toAccount *string, sequence, timestamp *int64, bizType *string, payload []byte) *P2PMessage {
 	p2pMsg := new(P2PMessage)
 	p2pMsg.packetId = packetId
 	p2pMsg.sequence = sequence
@@ -17,6 +18,9 @@ func NewP2pMsg(packetId, fromAccount, toAccount *string, sequence, timestamp *in
 	p2pMsg.fromAccount = fromAccount
 	p2pMsg.toAccount = toAccount
 	p2pMsg.payload = payload
+	if bizType != nil {
+		p2pMsg.bizType = bizType
+	}
 	return p2pMsg
 }
 

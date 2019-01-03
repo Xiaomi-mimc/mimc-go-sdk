@@ -138,7 +138,7 @@ func BuildSequenceAckPacket(mcUser *MCUser, packetList *MIMCPacketList) *packet.
 
 	return v6Packet
 }
-func BuildP2TMessagePacket(mcUser *MCUser, appTopic int64, msg []byte, isStore bool) (*packet.MIMCV6Packet, *MIMCPacket) {
+func BuildP2TMessagePacket(mcUser *MCUser, appTopic int64, msg []byte, isStore bool, bizType *string) (*packet.MIMCV6Packet, *MIMCPacket) {
 	clientHeader := createClientHeader(mcUser, cnst.CMD_SECMSG, id.Generate(), cnst.CIPHER_RC4)
 
 	fromUser := buildMIMCUser(mcUser)
@@ -148,6 +148,9 @@ func BuildP2TMessagePacket(mcUser *MCUser, appTopic int64, msg []byte, isStore b
 	p2tMsg.From = fromUser
 	p2tMsg.To = toGroup
 	p2tMsg.Payload = msg
+	if bizType != nil {
+		p2tMsg.BizType = bizType
+	}
 	p2tMsg.IsStore = &isStore
 
 	mimcPacket := new(MIMCPacket)
@@ -172,7 +175,7 @@ func BuildP2TMessagePacket(mcUser *MCUser, appTopic int64, msg []byte, isStore b
 	v6Packet.Payload(payload)
 	return v6Packet, mimcPacket
 }
-func BuildP2PMessagePacket(mcUser *MCUser, appAccount string, msg []byte, isStore bool) (*packet.MIMCV6Packet, *MIMCPacket) {
+func BuildP2PMessagePacket(mcUser *MCUser, appAccount string, msg []byte, isStore bool, bizType *string) (*packet.MIMCV6Packet, *MIMCPacket) {
 	clientHeader := createClientHeader(mcUser, cnst.CMD_SECMSG, id.Generate(), cnst.CIPHER_RC4)
 
 	fromUser := buildMIMCUser(mcUser)
@@ -182,6 +185,9 @@ func BuildP2PMessagePacket(mcUser *MCUser, appAccount string, msg []byte, isStor
 	p2pMsg.From = fromUser
 	p2pMsg.To = toUser
 	p2pMsg.Payload = msg
+	if bizType != nil {
+		p2pMsg.BizType = bizType
+	}
 	p2pMsg.IsStore = &isStore
 
 	mimcPacket := new(MIMCPacket)

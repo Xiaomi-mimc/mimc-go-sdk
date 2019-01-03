@@ -1,16 +1,17 @@
 package handler
 
 type StatusHandler struct {
+	appAccount string
 }
 
-func NewStatusHandler() *StatusHandler {
-	return &StatusHandler{}
+func NewStatusHandler(appAccount string) *StatusHandler {
+	return &StatusHandler{appAccount}
 }
 
 func (this StatusHandler) HandleChange(isOnline bool, errType, errReason, errDescription *string) {
 	if isOnline {
-		logger.Info("status changed: online.")
+		logger.Info("[%v] status changed: online.", this.appAccount)
 	} else {
-		logger.Info("status changed: offline.")
+		logger.Info("[%v] status changed: offline，errType:%v, errReason:%v, errDes:%v", this.appAccount, *errType, *errReason, *errDescription)
 	}
 }

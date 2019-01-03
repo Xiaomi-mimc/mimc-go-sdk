@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/Xiaomi-mimc/mimc-go-sdk/util/log"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -15,6 +16,8 @@ import (
 )
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+var logger = log.GetLogger()
 
 func Substring(str *string, from int) string {
 	source := []rune(*str)
@@ -143,6 +146,95 @@ func SynchronizeResource(root, dir, file, key, value *string) *string {
 		}
 	}
 	return SynchronizeWithFile(key, value, &resourceText)
+}
+
+func Transfer(origin []interface{}) []string {
+	var target []string
+	for _, value := range origin {
+		target = append(target, value.(string))
+	}
+	return target
+}
+
+func check(root, dir, file *string) (bool, *string) {
+	rot := Substr(root, 0, strings.LastIndex(*root, "/"))
+	resourcePath := rot + *dir
+	resourceText := resourcePath + *file
+	result, _ := PathExists(&resourcePath)
+	if result {
+		result, _ = PathExists(&resourceText)
+		if !result {
+			result, _ = CreateFile(&resourceText)
+			return result, &resourceText
+		}
+		return true, &resourceText
+	} else {
+		result, _ = CrateDir(&resourcePath)
+		if result {
+			result, _ = CreateFile(&resourceText)
+			return result, &resourceText
+		} else {
+			fmt.Printf("can not create dir %s.\n", *file)
+			return false, nil
+		}
+	}
+	return false, nil
+}
+
+func FlushUserInfo(root, dir, file *string, userInfo map[string]interface{}) bool {
+	result, path := check(root, dir, file)
+	if !result {
+		logger.Info("check file%v failed", *file)
+		return false
+	}
+	f, err := os.OpenFile(*path, os.O_RDWR, 0666)
+	defer f.Close()
+	if err != nil {
+		logger.Info("open file:%s failed，%v", *file, err)
+		return false
+	}
+	data, jsonErr := json.Marshal(userInfo)
+	if jsonErr != nil {
+		logger.Info("marshal user Info failed")
+		return false
+	}
+	size, ferr := f.WriteAt(data, 0)
+	if ferr != nil {
+		logger.Warn("write user Info failed")
+		return false
+	} else if size != len(data) {
+		logger.Info("write user Info length error")
+		return false
+	}
+	return true
+}
+
+func FetchUserInfo(root, dir, file *string, userInfo map[string]interface{}) bool {
+	result, path := check(root, dir, file)
+	if !result {
+		return false
+	}
+	f, err := os.OpenFile(*path, os.O_RDWR, 0666)
+	defer f.Close()
+	if err != nil {
+		return false
+	}
+	data, _ := ioutil.ReadAll(f)
+	var localInfo map[string]interface{} = make(map[string]interface{})
+	if len(data) != 0 {
+		decoder := json.NewDecoder(strings.NewReader(string(data)))
+		decoder.UseNumber()
+		if err = decoder.Decode(&localInfo); err != nil {
+			panic(err)
+		}
+		updated := false
+		for key, value := range localInfo {
+			userInfo[key] = value
+			updated = true
+		}
+		return updated
+	}
+	return false
 }
 
 func SynchronizeWithFile(key, value, file *string) *string {

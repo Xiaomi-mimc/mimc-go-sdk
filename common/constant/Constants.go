@@ -25,6 +25,9 @@ const (
 
 	MIMC_SERVER string = "xiaomi.com"
 
+	TOKEN_EXPIRED string = "token-expired"
+	TOKEN_INVALID string = "invalid-token"
+
 	CIPHER_NONE int32 = 0
 	CIPHER_RC4  int32 = 1
 	CIPHER_AES  int32 = 2
@@ -59,6 +62,10 @@ const (
 	TOKEN_IP_ONLINE  string = "mimc.chat.xiaomi.net/api/account/token"
 	TOKEN_IP_STAGING string = "10.38.162.149"
 
+	ONLINE_RESOLVER_URL string = "http://resolver.msg.xiaomi.net/gslb/"
+
+	FE_ADDRESS_KEY string = "MIMC_FE_ADDR"
+
 	CACHE_DIR  string = "/attach/"
-	CACHE_FILE string = ".userInfo"
+	CACHE_FILE string = ".info.etd"
 )

@@ -12,16 +12,18 @@ import (
 	"github.com/Xiaomi-mimc/mimc-go-sdk/util/byte"
 	"github.com/Xiaomi-mimc/mimc-go-sdk/util/log"
 	"github.com/Xiaomi-mimc/mimc-go-sdk/util/map"
+	"github.com/Xiaomi-mimc/mimc-go-sdk/util/net"
 	"github.com/Xiaomi-mimc/mimc-go-sdk/util/queue"
 	"github.com/Xiaomi-mimc/mimc-go-sdk/util/string"
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 )
 
 type UserStatus int
 
-var logger *log.Logger
+var logger = log.GetLogger()
 
 const (
 	Online UserStatus = iota
@@ -33,7 +35,7 @@ func init() {
 }
 
 type MCUser struct {
-	chid     float64
+	chid     int32
 	uuid     int64
 	resource string
 	status   UserStatus
@@ -51,8 +53,11 @@ type MCUser struct {
 	indexer int
 
 	securityKey string
-	token       *string
+	token       string
 	tryLogin    bool
+
+	feDomain  string
+	feAddress []string
 
 	sequenceReceived        map[uint32]interface{}
 	conn                    *MIMCConnection
@@ -69,11 +74,35 @@ type MCUser struct {
 	packetToCallback *que.ConQueue
 }
 
-func NewUser(appAccount string) *MCUser {
-	logger = log.GetLogger()
+func (this *MCUser) printUserInfo() {
+	logger.Warn("\tappId:%v\n"+
+		"\tappAccount:%v\n"+
+		"\ttoken:%v\n"+
+		"\tfeDomain:%v\n"+
+		"\tfeAddress:%v\n"+
+		"\tuuid:%v\n"+
+		"\tsecurityKey:%v\n"+
+		"\tresource:%v\n"+
+		"\tchid:%v\n"+
+		"\tappPackage:%v\n",
+		this.appId, this.appAccount, this.token, this.feDomain, this.feAddress,
+		this.uuid, this.securityKey, this.resource, this.chid, this.appPackage)
+}
+
+func NewUser(appId int64, appAccount string) *MCUser {
 	this := NewMCUser()
 	this.appAccount = appAccount
+	this.appId = appId
 	return this
+}
+
+func NewMCUser() *MCUser {
+	this := new(MCUser)
+	return this
+}
+
+func (this *MCUser) fetchFEAddr() []string {
+	return this.feAddress
 }
 
 func (this *MCUser) RegisterTokenDelegate(tokenDelegate Token) *MCUser {
@@ -91,15 +120,10 @@ func (this *MCUser) RegisterMessageDelegate(msgDelegate MessageHandlerDelegate) 
 	return this
 }
 
-func NewMCUser() *MCUser {
-	mcUser := new(MCUser)
-	return mcUser
-}
-
 func (this *MCUser) InitAndSetup() {
 	void := ""
 	this.status = Offline
-	this.resource = strutil.RandomStrWithLength(10)
+	this.resource = "mimc_go_" + strutil.RandomStrWithLength(10)
 	this.lastLoginTimestamp = 0
 	this.lastCreateConnTimestamp = 0
 	this.lastPingTimestamp = 0
@@ -110,63 +134,115 @@ func (this *MCUser) InitAndSetup() {
 	this.appPackage = void
 	this.chid = 0
 	this.uuid = 0
-	this.appId = 0
-	this.token = &void
+	this.token = void
 	this.securityKey = void
 	this.clientAttrs = void
 	this.cloudAttrs = void
 	this.tryLogin = false
-	//this.synchronizeResource()
+	this.feAddress = nil
+	this.feDomain = void
+	this.fetchUserInfo()
 	go this.sendRoutine()
 	go this.receiveRoutine()
 	go this.triggerRoutine()
 	go this.callBackRoutine()
 }
 
-func (this *MCUser) synchronizeResource() {
+func (this *MCUser) fetchUserInfo() {
 	root, _ := exec.LookPath(os.Args[0])
 	dir := cnst.CACHE_DIR
-	file := cnst.CACHE_FILE
-	key := strconv.FormatInt(this.appId, 10) + "_" + this.appAccount + "_resource"
-	this.resource = *(strutil.SynchronizeResource(&root, &dir, &file, &key, &(this.resource)))
-}
-func (this *MCUser) synchronizeToken() *string {
-	root, _ := exec.LookPath(os.Args[0])
-	dir := cnst.CACHE_DIR
-	file := cnst.CACHE_FILE
-	key := strconv.FormatInt(this.appId, 10) + "_" + this.appAccount + "_token"
-	token := strutil.SynchronizeResource(&root, &dir, &file, &key, this.token)
-	this.token = token
-	return token
+	key := strconv.FormatInt(this.appId, 10) + "_" + this.appAccount
+	file := key + cnst.CACHE_FILE
+	userInfo := map[string]interface{}{}
+
+	if strutil.FetchUserInfo(&root, &dir, &file, userInfo) {
+		this.token = userInfo["token"].(string)
+		this.feDomain = userInfo["feDomain"].(string)
+		this.feAddress = strutil.Transfer(userInfo["feAddress"].([]interface{}))
+		resource := userInfo["resource"].(string)
+		if strings.Compare(resource, "") != 0 {
+			this.resource = resource
+		}
+		this.securityKey = userInfo["securityKey"].(string)
+		chid, _ := userInfo["chid"].(json.Number).Int64()
+		this.chid = int32(chid)
+		this.appPackage = userInfo["appPackage"].(string)
+		this.uuid, _ = userInfo["uuid"].(json.Number).Int64()
+
+		if strings.Compare(this.feDomain, "") == 0 ||
+			len(this.feAddress) == 0 ||
+			this.uuid == 0 ||
+			this.chid == 0 ||
+			strings.Compare(this.token, "") == 0 {
+			this.uuid = 0
+			this.chid = 0
+			this.token = ""
+			this.feDomain = ""
+			this.feAddress = []string{}
+		}
+	}
+	//this.printUserInfo()
 }
 
+func (this *MCUser) flushUserInfo() bool {
+
+	root, _ := exec.LookPath(os.Args[0])
+	dir := cnst.CACHE_DIR
+	key := strconv.FormatInt(this.appId, 10) + "_" + this.appAccount
+	file := key + cnst.CACHE_FILE
+	userInfo := map[string]interface{}{}
+	userInfo["uuid"] = this.uuid
+	userInfo["appAccount"] = this.appAccount
+	userInfo["token"] = this.token
+	userInfo["appId"] = this.appId
+	userInfo["feDomain"] = this.feDomain
+	userInfo["feAddress"] = this.feAddress
+	userInfo["resource"] = this.resource
+	userInfo["securityKey"] = this.securityKey
+	userInfo["chid"] = this.chid
+	userInfo["appPackage"] = this.appPackage
+	return strutil.FlushUserInfo(&root, &dir, &file, userInfo)
+
+}
+
+/**
+* when token is invalid, or conn get empyty feDomain/feAddress, it should refresh token
+ */
 func (this *MCUser) refreshToken() bool {
+	logger.Info("[%v] refresh token", this.appAccount)
 	if this.tokenDelegate == nil {
 		logger.Error("%v Login fail, have to fetch token.", this.appAccount)
 		return false
 	}
 	tokenJsonStr := this.tokenDelegate.FetchToken()
-	this.tryLogin = true
 	if tokenJsonStr == nil {
 		logger.Warn("%v Login fail, get nil token string.", this.appAccount)
 		return false
 	}
 	var tokenMap map[string]interface{}
-	if err := json.Unmarshal([]byte(*tokenJsonStr), &tokenMap); err == nil {
-		data := tokenMap["data"].(map[string]interface{})
-		code := tokenMap["code"].(float64)
+	decoder := json.NewDecoder(strings.NewReader(*tokenJsonStr))
+	decoder.UseNumber()
+
+	if err := decoder.Decode(&tokenMap); err == nil {
+		code, _ := tokenMap["code"].(json.Number).Int64()
 		if code != 200 {
-			logger.Warn("%v Login fail, response code: %v", this.appAccount, data)
+			logger.Warn("%v fetch token fail, response code: %v", this.appAccount, tokenMap["message"].(string))
+			return false
+		}
+		data := tokenMap["data"].(map[string]interface{})
+		appId, _ := strconv.ParseInt(data["appId"].(string), 10, 64)
+		if appId != this.appId {
+			logger.Warn("appId:%v in token no match appId: %v.", appId, this.appId)
 			return false
 		}
 		appAccount := data["appAccount"].(string)
 		if appAccount != this.appAccount {
-			logger.Warn("appAccount:%v does not match token generated by appAccount: %v.", this.appAccount, appAccount)
+			logger.Warn("appAccount:%v in token not match appAccount: %v.", appAccount, this.appAccount)
 			return false
 		}
 		this.appPackage = data["appPackage"].(string)
-		this.chid = data["miChid"].(float64)
-		this.appId, _ = strconv.ParseInt(data["appId"].(string), 10, 64)
+		chid, _ := data["miChid"].(json.Number).Int64()
+		this.chid = int32(chid)
 		uuid, err := strconv.ParseInt(data["miUserId"].(string), 10, 64)
 		if err != nil {
 			logger.Error("%v Login fail, can not parse token string.", this.appAccount)
@@ -175,12 +251,14 @@ func (this *MCUser) refreshToken() bool {
 		this.uuid = uuid
 		this.securityKey = data["miUserSecurityKey"].(string)
 		token, ok := data["token"]
+		this.feDomain = data["feDomainName"].(string)
+		this.feAddress = httputil.GetFEAddress(cnst.ONLINE_RESOLVER_URL, this.feDomain)
 		if ok {
-			tokenStr := token.(string)
-			this.token = &(tokenStr)
-			this.tryLogin = false
-			return true
+			this.token = token.(string)
+			//this.printUserInfo()
+			return this.flushUserInfo()
 		} else {
+			logger.Warn("parse token failed")
 			return false
 		}
 	} else {
@@ -189,16 +267,9 @@ func (this *MCUser) refreshToken() bool {
 }
 
 func (this *MCUser) Login() bool {
-	if *(this.synchronizeToken()) != "" {
-		return true
-	}
-	result := this.refreshToken()
-	if result {
-		this.synchronizeResource()
-	}
 	this.tryLogin = true
-	return result
 
+	return true
 }
 func (this *MCUser) Logout() bool {
 	if this.status == Offline {
@@ -211,26 +282,101 @@ func (this *MCUser) Logout() bool {
 	return true
 }
 
-func (this *MCUser) SendMessage(toAppAccount string, msgByte []byte) string {
-	if &toAppAccount == nil || msgByte == nil || len(msgByte) == 0 {
+func (this *MCUser) SendMessage(toAppAccount string, payload []byte) string {
+	if &toAppAccount == nil || payload == nil || len(payload) == 0 {
 		return ""
 	}
-	logger.Info("[Send P2P Msg]%v -> %v: %v.\n", this.appAccount, toAppAccount, string(msgByte))
-	v6Packet, mimcPacket := BuildP2PMessagePacket(this, toAppAccount, msgByte, true)
+	logger.Info("[%v] [Send P2P Msg]%v -> %v: %v.", this.appAccount, this.appAccount, toAppAccount, string(payload))
+	v6Packet, mimcPacket := BuildP2PMessagePacket(this, toAppAccount, payload, true, nil)
 	timeoutPacket := packet.NewTimeoutPacket(CurrentTimeMillis(), mimcPacket)
 	msgPacket := msg.NewMsgPacket(cnst.MIMC_C2S_DOUBLE_DIRECTION, v6Packet)
 	this.messageToSend.Push(msgPacket)
 	this.messageToAck.Push(*(mimcPacket.PacketId), timeoutPacket)
 	return *(mimcPacket.PacketId)
-
 }
 
-func (this *MCUser) SendGroupMessage(topicId *int64, msgByte []byte) string {
-	if &topicId == nil || msgByte == nil || len(msgByte) == 0 {
+func (this *MCUser) SendMessageWithStore(toAppAccount string, payload []byte, isStore bool) string {
+	if &toAppAccount == nil || payload == nil || len(payload) == 0 {
 		return ""
 	}
-	logger.Info("[Send P2T Msg]%v send p2t msg to %v: %v.\n", this.appAccount, *topicId, string(msgByte))
-	v6Packet, mimcPacket := BuildP2TMessagePacket(this, *topicId, msgByte, true)
+	logger.Info("[%v] [Send P2P Msg]%v -> %v: %v.", this.appAccount, this.appAccount, toAppAccount, string(payload))
+	v6Packet, mimcPacket := BuildP2PMessagePacket(this, toAppAccount, payload, isStore, nil)
+	timeoutPacket := packet.NewTimeoutPacket(CurrentTimeMillis(), mimcPacket)
+	msgPacket := msg.NewMsgPacket(cnst.MIMC_C2S_DOUBLE_DIRECTION, v6Packet)
+	this.messageToSend.Push(msgPacket)
+	this.messageToAck.Push(*(mimcPacket.PacketId), timeoutPacket)
+	return *(mimcPacket.PacketId)
+}
+
+func (this *MCUser) SendMessageWithBizType(toAppAccount string, payload []byte, bizType *string) string {
+	if &toAppAccount == nil || payload == nil || len(payload) == 0 {
+		return ""
+	}
+	logger.Info("[%v] [Send P2P Msg]%v -> %v: %v.", this.appAccount, this.appAccount, toAppAccount, string(payload))
+	v6Packet, mimcPacket := BuildP2PMessagePacket(this, toAppAccount, payload, true, bizType)
+	timeoutPacket := packet.NewTimeoutPacket(CurrentTimeMillis(), mimcPacket)
+	msgPacket := msg.NewMsgPacket(cnst.MIMC_C2S_DOUBLE_DIRECTION, v6Packet)
+	this.messageToSend.Push(msgPacket)
+	this.messageToAck.Push(*(mimcPacket.PacketId), timeoutPacket)
+	return *(mimcPacket.PacketId)
+}
+func (this *MCUser) SendMessageWithStoreAndBizType(toAppAccount string, payload []byte, bizType *string, isStore bool) string {
+	if &toAppAccount == nil || payload == nil || len(payload) == 0 {
+		return ""
+	}
+	logger.Info("[%v] [Send P2P Msg]%v -> %v: %v.", this.appAccount, this.appAccount, toAppAccount, string(payload))
+	v6Packet, mimcPacket := BuildP2PMessagePacket(this, toAppAccount, payload, isStore, bizType)
+	timeoutPacket := packet.NewTimeoutPacket(CurrentTimeMillis(), mimcPacket)
+	msgPacket := msg.NewMsgPacket(cnst.MIMC_C2S_DOUBLE_DIRECTION, v6Packet)
+	this.messageToSend.Push(msgPacket)
+	this.messageToAck.Push(*(mimcPacket.PacketId), timeoutPacket)
+	return *(mimcPacket.PacketId)
+}
+
+func (this *MCUser) SendGroupMessage(topicId *int64, payload []byte) string {
+	if &topicId == nil || payload == nil || len(payload) == 0 {
+		return ""
+	}
+	logger.Info("[Send P2T Msg]%v send p2t msg to %v: %v.\n", this.appAccount, *topicId, string(payload))
+	v6Packet, mimcPacket := BuildP2TMessagePacket(this, *topicId, payload, true, nil)
+	timeoutPacket := packet.NewTimeoutPacket(CurrentTimeMillis(), mimcPacket)
+	msgPacket := msg.NewMsgPacket(cnst.MIMC_C2S_DOUBLE_DIRECTION, v6Packet)
+	this.messageToSend.Push(msgPacket)
+	this.messageToAck.Push(*(mimcPacket.PacketId), timeoutPacket)
+	return *(mimcPacket.PacketId)
+}
+func (this *MCUser) SendGroupMessageWithStore(topicId *int64, payload []byte, isStore bool) string {
+	if &topicId == nil || payload == nil || len(payload) == 0 {
+		return ""
+	}
+	logger.Info("[Send P2T Msg]%v send p2t msg to %v: %v.\n", this.appAccount, *topicId, string(payload))
+	v6Packet, mimcPacket := BuildP2TMessagePacket(this, *topicId, payload, isStore, nil)
+	timeoutPacket := packet.NewTimeoutPacket(CurrentTimeMillis(), mimcPacket)
+	msgPacket := msg.NewMsgPacket(cnst.MIMC_C2S_DOUBLE_DIRECTION, v6Packet)
+	this.messageToSend.Push(msgPacket)
+	this.messageToAck.Push(*(mimcPacket.PacketId), timeoutPacket)
+	return *(mimcPacket.PacketId)
+}
+
+func (this *MCUser) SendGroupMessageWithBizType(topicId *int64, payload []byte, bizType *string) string {
+	if &topicId == nil || payload == nil || len(payload) == 0 {
+		return ""
+	}
+	logger.Info("[Send P2T Msg]%v send p2t msg to %v: %v.\n", this.appAccount, *topicId, string(payload))
+	v6Packet, mimcPacket := BuildP2TMessagePacket(this, *topicId, payload, true, bizType)
+	timeoutPacket := packet.NewTimeoutPacket(CurrentTimeMillis(), mimcPacket)
+	msgPacket := msg.NewMsgPacket(cnst.MIMC_C2S_DOUBLE_DIRECTION, v6Packet)
+	this.messageToSend.Push(msgPacket)
+	this.messageToAck.Push(*(mimcPacket.PacketId), timeoutPacket)
+	return *(mimcPacket.PacketId)
+}
+
+func (this *MCUser) SendGroupMessageWithStoreAndBizType(topicId *int64, payload []byte, bizType *string, isStore bool) string {
+	if &topicId == nil || payload == nil || len(payload) == 0 {
+		return ""
+	}
+	logger.Info("[Send P2T Msg]%v send p2t msg to %v: %v.\n", this.appAccount, *topicId, string(payload))
+	v6Packet, mimcPacket := BuildP2TMessagePacket(this, *topicId, payload, isStore, bizType)
 	timeoutPacket := packet.NewTimeoutPacket(CurrentTimeMillis(), mimcPacket)
 	msgPacket := msg.NewMsgPacket(cnst.MIMC_C2S_DOUBLE_DIRECTION, v6Packet)
 	this.messageToSend.Push(msgPacket)
@@ -239,7 +385,7 @@ func (this *MCUser) SendGroupMessage(topicId *int64, msgByte []byte) string {
 }
 
 func (this *MCUser) sendRoutine() {
-	logger.Info("initate send goroutine.")
+	logger.Info("[%s] initate send goroutine.", this.appAccount)
 	if this.conn == nil {
 		return
 	}
@@ -254,6 +400,7 @@ func (this *MCUser) sendRoutine() {
 				Sleep(100)
 				continue
 			}
+
 			this.lastCreateConnTimestamp = CurrentTimeMillis()
 			if !this.conn.Connect() {
 				logger.Warn("connet to MIMC Server fail.\n")
@@ -261,7 +408,7 @@ func (this *MCUser) sendRoutine() {
 			}
 			this.conn.Sock_Connected()
 			this.lastCreateConnTimestamp = 0
-			logger.Info("%v: build conn packet.", this.appAccount)
+			logger.Info("[%v] build conn packet.", this.appAccount)
 			pkt = BuildConnectionPacket(this.conn.Udid(), this)
 		}
 		if this.conn.Status() == SOCK_CONNECTED {
@@ -280,8 +427,8 @@ func (this *MCUser) sendRoutine() {
 					Sleep(100)
 					continue
 				}
+				this.lastLoginTimestamp = CurrentTimeMillis()
 			}
-			this.lastLoginTimestamp = CurrentTimeMillis()
 		}
 		if this.status == Online {
 
@@ -291,7 +438,7 @@ func (this *MCUser) sendRoutine() {
 				isPing := dist-cnst.PING_TIMEVAL_MS > 0
 				if isPing {
 					pkt = BuildPingPacket(this)
-					logger.Info("%v: build ping packet.", this.appAccount)
+					logger.Info("[%v] build ping packet.", this.appAccount)
 				} else {
 					Sleep(100)
 					continue
@@ -305,10 +452,7 @@ func (this *MCUser) sendRoutine() {
 			}
 
 		} else {
-			/*if this.tryLogin {
-				this.Login()
-				Sleep(100)
-			}*/
+
 		}
 		if pkt == nil {
 			Sleep(100)
@@ -339,7 +483,7 @@ func (this *MCUser) PeerFetcher(fetcher frontend.ProdFrontPeerFetcher) {
 	this.conn.PeerFetcher(fetcher)
 }
 func (this *MCUser) receiveRoutine() {
-	logger.Info("initate receive goroutine.\n")
+	logger.Info("[%s] initate receive goroutine.", this.appAccount)
 	var counter int = 0
 	if this.conn == nil {
 		return
@@ -405,7 +549,7 @@ func (this *MCUser) receiveRoutine() {
 	}
 }
 func (this *MCUser) triggerRoutine() {
-	logger.Info("initiate trigger goroutine.")
+	logger.Info("[%s] initiate trigger goroutine.", this.appAccount)
 	if this.conn == nil {
 		return
 	}
@@ -422,7 +566,7 @@ func (this *MCUser) triggerRoutine() {
 }
 
 func (this *MCUser) callBackRoutine() {
-	logger.Info("initiate callback goroutine.")
+	logger.Info("[%s] initiate callback goroutine.", this.appAccount)
 	if this.conn == nil {
 		return
 	}
@@ -466,7 +610,7 @@ func (this *MCUser) scanAndCallback() {
 			if !err {
 				return
 			}
-			p2pMsg := msg.NewP2pMsg(mimcPacket.PacketId, p2pMessage.From.AppAccount, p2pMessage.To.AppAccount, mimcPacket.Sequence, mimcPacket.Timestamp, p2pMessage.Payload)
+			p2pMsg := msg.NewP2pMsg(mimcPacket.PacketId, p2pMessage.From.AppAccount, p2pMessage.To.AppAccount, mimcPacket.Sequence, mimcPacket.Timestamp, p2pMessage.BizType, p2pMessage.Payload)
 			this.msgDelegate.HandleSendMessageTimeout(p2pMsg)
 		} else if *(mimcPacket.Type) == MIMC_MSG_TYPE_P2T_MESSAGE {
 			p2tMessage := new(MIMCP2TMessage)
@@ -474,7 +618,7 @@ func (this *MCUser) scanAndCallback() {
 			if !err {
 				return
 			}
-			p2tMsg := msg.NewP2tMsg(mimcPacket.PacketId, p2tMessage.From.AppAccount, mimcPacket.Sequence, mimcPacket.Timestamp, p2tMessage.To.TopicId, p2tMessage.Payload)
+			p2tMsg := msg.NewP2tMsg(mimcPacket.PacketId, p2tMessage.From.AppAccount, mimcPacket.Sequence, mimcPacket.Timestamp, p2tMessage.To.TopicId, p2tMessage.BizType, p2tMessage.Payload)
 			this.msgDelegate.HandleSendGroupMessageTimeout(p2tMsg)
 		}
 		timeoutKeys.PushBack(key)
@@ -489,7 +633,7 @@ func (this *MCUser) scanAndCallback() {
 
 func (this *MCUser) handleResponse(v6Packet *packet.MIMCV6Packet) {
 	if v6Packet.GetHeader() == nil {
-		logger.Info("[handle packet]get a pong packet.")
+		logger.Info("[%v] [handle packet]get a pong packet.", this.appAccount)
 		return
 	}
 	cmd := v6Packet.GetHeader().Cmd
@@ -517,18 +661,17 @@ func (this *MCUser) handleResponse(v6Packet *packet.MIMCV6Packet) {
 				this.lastLoginTimestamp = 0
 				logger.Debug("[handle packet] login succ.")
 			} else {
-
-				if cnst.MIMC_TOKEN_EXPIRE == *(bindResp.ErrorType) {
-					logger.Warn("[handle packet] token expired, relogin().")
-					this.Login()
+				if strings.Compare(bindResp.GetErrorType(), cnst.TOKEN_EXPIRED) == 0 ||
+					(strings.Compare(bindResp.GetErrorType(), "auto") == 0 &&
+						strings.Compare(bindResp.GetErrorReason(), cnst.TOKEN_INVALID) == 0) {
+					this.refreshToken()
 				} else {
 					this.status = Offline
-					logger.Warn("[handle packet] login fail. %v", err)
+					logger.Warn("[%v] [handle packet] login fail.", this.appAccount)
 				}
-
 			}
 			if this.statusDelegate == nil {
-				logger.Warn("%v status changed, you need to handle this.", this.appAccount)
+				logger.Warn("[%v] status changed, you need to handle this.", this.appAccount)
 			} else {
 				this.statusDelegate.HandleChange(*(bindResp.Result), bindResp.ErrorType, bindResp.ErrorReason, bindResp.ErrorDesc)
 			}
@@ -538,7 +681,7 @@ func (this *MCUser) handleResponse(v6Packet *packet.MIMCV6Packet) {
 		kick := "kick"
 		logger.Debug("[handle] logout succ.")
 		if this.statusDelegate == nil {
-			logger.Warn("%v status changed, you need to handle this.", this.appAccount)
+			logger.Warn("[%v] status changed, you need to handle this.", this.appAccount)
 		} else {
 			this.statusDelegate.HandleChange(false, &kick, &kick, &kick)
 		}
@@ -550,12 +693,13 @@ func (this *MCUser) handleResponse(v6Packet *packet.MIMCV6Packet) {
 
 func (this *MCUser) handleSecMsg(v6Packet *packet.MIMCV6Packet) {
 	if this.msgDelegate == nil {
-		logger.Warn("%v need to regist mssage handler for received messages.", this.appAccount)
+		logger.Warn("[%v] need to regist mssage handler for received messages.", this.appAccount)
+		return
 	}
 	mimcPacket := new(MIMCPacket)
 	err := Deserialize(v6Packet.GetPayload(), mimcPacket)
 	if !err {
-		logger.Warn("[handleSecMsg] unserialize mimcPacket fails.%v", err)
+		logger.Warn("[%v] [handleSecMsg] unserialize mimcPacket fails.%v", this.appAccount, err)
 		return
 	} else {
 		switch *(mimcPacket.Type) {
@@ -566,10 +710,10 @@ func (this *MCUser) handleSecMsg(v6Packet *packet.MIMCV6Packet) {
 			if !err {
 				return
 			}
-			this.msgDelegate.HandleServerAck(packetAck.PacketId, packetAck.Sequence, packetAck.Timestamp)
+			this.msgDelegate.HandleServerAck(packetAck.PacketId, packetAck.Sequence, packetAck.Timestamp, packetAck.ErrorMsg)
 			packet := this.messageToAck.Pop(*(packetAck.PacketId))
 			if packet == nil {
-				logger.Warn("pop message fails. packetId: %v", *(packetAck.PacketId))
+				logger.Warn("[%v] pop message fails. packetId: %v", this.appAccount, *(packetAck.PacketId))
 			}
 			break
 		case MIMC_MSG_TYPE_COMPOUND:
@@ -579,7 +723,7 @@ func (this *MCUser) handleSecMsg(v6Packet *packet.MIMCV6Packet) {
 				return
 			}
 			if this.resource != *(packetList.Resource) {
-				logger.Warn("Handle SecMsg MIMCPacketList resource:, current resource:", *(packetList.Resource), this.resource)
+				logger.Warn("[%v] Handle SecMsg MIMCPacketList resource:, current resource:", this.appAccount, *(packetList.Resource), this.resource)
 				return
 			}
 			seqAckPacket := BuildSequenceAckPacket(this, packetList)
@@ -599,7 +743,7 @@ func (this *MCUser) handleSecMsg(v6Packet *packet.MIMCV6Packet) {
 					if !err {
 						continue
 					}
-					p2pMsgList.PushBack(msg.NewP2pMsg(packet.PacketId, p2pMessage.From.AppAccount, p2pMessage.To.AppAccount, packet.Sequence, packet.Timestamp, p2pMessage.Payload))
+					p2pMsgList.PushBack(msg.NewP2pMsg(packet.PacketId, p2pMessage.From.AppAccount, p2pMessage.To.AppAccount, packet.Sequence, packet.Timestamp, p2pMessage.BizType, p2pMessage.Payload))
 					continue
 				} else if *(packet.Type) == MIMC_MSG_TYPE_P2T_MESSAGE {
 					p2tMessage := new(MIMCP2TMessage)
@@ -608,16 +752,16 @@ func (this *MCUser) handleSecMsg(v6Packet *packet.MIMCV6Packet) {
 					if !err {
 						continue
 					}
-					p2tMsgList.PushBack(msg.NewP2tMsg(packet.PacketId, p2tMessage.From.AppAccount, packet.Sequence, packet.Timestamp, p2tMessage.To.TopicId, p2tMessage.Payload))
+					p2tMsgList.PushBack(msg.NewP2tMsg(packet.PacketId, p2tMessage.From.AppAccount, packet.Sequence, packet.Timestamp, p2tMessage.To.TopicId, p2tMessage.BizType, p2tMessage.Payload))
 					continue
 				}
 			}
 			if p2pMsgList.Len() > 0 {
-				//logger.Info("call p2p msg handler.")
+				logger.Info("[%v] recv %v p2p msg", this.appAccount, p2pMsgList.Len())
 				this.msgDelegate.HandleMessage(p2pMsgList)
 			}
 			if p2tMsgList.Len() > 0 {
-				logger.Info("call p2t msg handler.")
+				logger.Info("[%v] recv %v p2t msg", this.appAccount, p2tMsgList.Len())
 				this.msgDelegate.HandleGroupMessage(p2tMsgList)
 			}
 			break
@@ -627,7 +771,7 @@ func (this *MCUser) handleSecMsg(v6Packet *packet.MIMCV6Packet) {
 	}
 }
 func (this *MCUser) handleToken() {
-	this.token = this.tokenDelegate.FetchToken()
+	this.token = *(this.tokenDelegate.FetchToken())
 }
 
 func (this *MCUser) SetResource(resource string) *MCUser {
@@ -638,7 +782,7 @@ func (this *MCUser) SetUuid(uuid int64) *MCUser {
 	this.uuid = uuid
 	return this
 }
-func (this *MCUser) SetChid(chid float64) *MCUser {
+func (this *MCUser) SetChid(chid int32) *MCUser {
 	this.chid = chid
 	return this
 }
@@ -646,7 +790,7 @@ func (this *MCUser) SetConn(conn *MIMCConnection) *MCUser {
 	this.conn = conn
 	return this
 }
-func (this *MCUser) SetToken(token *string) *MCUser {
+func (this *MCUser) SetToken(token string) *MCUser {
 	this.token = token
 	return this
 }
@@ -677,10 +821,18 @@ func (this *MCUser) Conn() *MIMCConnection {
 	return this.conn
 }
 
+func (this *MCUser) FeDomain() *string {
+	return &(this.feDomain)
+}
+
+func (this *MCUser) FeAddress() []string {
+	return this.feAddress
+}
+
 func (this *MCUser) Uuid() int64 {
 	return this.uuid
 }
-func (this *MCUser) Chid() float64 {
+func (this *MCUser) Chid() int32 {
 	return this.chid
 }
 func (this *MCUser) Resource() string {
@@ -690,7 +842,7 @@ func (this *MCUser) SecKey() string {
 	return this.securityKey
 }
 func (this *MCUser) Token() *string {
-	return this.token
+	return &(this.token)
 }
 func (this *MCUser) ClientAttrs() string {
 	return this.clientAttrs
