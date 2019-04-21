@@ -26,15 +26,25 @@ type Logger struct {
 }
 
 var lock sync.Mutex
-var level = InfoLevel
-var log *Logger = nil
-var logPath = "./mimc.log"
+var level LogLevel
+var log *Logger
+var logPath string
+
+func init() {
+	level = InfoLevel
+	log = nil
+	logPath = "./mimc.log"
+}
 
 func SetLogPath(path string) {
 	logPath = path
 }
 func SetLogLevel(lvl LogLevel) {
-	level = lvl
+	if log != nil {
+		log.level = lvl
+	} else {
+		level = lvl
+	}
 }
 
 func GetLogger() *Logger {
@@ -56,33 +66,33 @@ func GetLogger() *Logger {
 
 func (this *Logger) Info(format string, args ...interface{}) {
 	if this.level <= InfoLevel {
-		this.log.SetPrefix("[info] ")
-		this.log.Output(2, fmt.Sprintf(format, args...))
-		fmt.Printf("["+currTime()+"] "+format+"\n", args...)
+		this.log.SetPrefix("[info]\t")
+		this.log.Output(2, fmt.Sprintf("\t\t"+format, args...))
+		fmt.Printf("["+currTime()+"]  [info] "+format+"\n", args...)
 	}
 }
 
 func (this *Logger) Debug(format string, args ...interface{}) {
 	if this.level <= DebugLevel {
-		this.log.SetPrefix("[debug]")
-		this.log.Output(2, fmt.Sprintf(format, args...))
-		fmt.Printf("["+currTime()+"] "+format+"\n", args...)
+		this.log.SetPrefix("[debug]\t")
+		this.log.Output(2, fmt.Sprintf("\t\t"+format, args...))
+		fmt.Printf("["+currTime()+"] [debug] "+format+"\n", args...)
 	}
 }
 
 func (this *Logger) Warn(format string, args ...interface{}) {
 	if this.level <= WarnLevel {
-		this.log.SetPrefix("[warn]")
-		this.log.Output(2, fmt.Sprintf(format, args...))
-		fmt.Printf("["+currTime()+"] "+format+"\n", args...)
+		this.log.SetPrefix("[warn]\t")
+		this.log.Output(2, fmt.Sprintf("\t\t"+format, args...))
+		fmt.Printf("["+currTime()+"]  [warn] "+format+"\n", args...)
 	}
 }
 
 func (this *Logger) Error(format string, args ...interface{}) {
 	if this.level <= ErrorLevel {
-		this.log.SetPrefix("[error]")
-		this.log.Output(2, fmt.Sprintf(format, args...))
-		fmt.Printf("["+currTime()+"] "+format+"\n", args...)
+		this.log.SetPrefix("[error]\t")
+		this.log.Output(2, fmt.Sprintf("\t\t"+format, args...))
+		fmt.Printf("["+currTime()+"] [error] "+format+"\n", args...)
 	}
 }
 

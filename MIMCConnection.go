@@ -113,17 +113,17 @@ func (this *MIMCConnection) Reset() {
 }
 
 func (this *MIMCConnection) Connect() bool {
-
 	feAddrs := this.user.FeAddress()
 	if feAddrs == nil {
 		if this.user.refreshToken() {
 			feAddrs = this.user.FeAddress()
 		} else {
-			logger.Info("%s fresh token failed", this.user.AppAccount())
+			logger.Info("[%s] fresh token failed", this.user.appAccount)
 		}
 	}
 	for _, addr := range feAddrs {
 		conn, err := net.Dial("tcp", addr)
+		logger.Info("[%v] connect to server:%v", this.user.appAccount, addr)
 		if err == nil {
 			this.tcpConn = conn
 			return true
@@ -134,7 +134,7 @@ func (this *MIMCConnection) Connect() bool {
 
 func (this *MIMCConnection) Readn(buf *[]byte, length int) int {
 	if !this.check(buf, length) {
-		logger.Warn("check: buf len %v != length %v", len(*buf), length)
+		logger.Warn("[%v] check: buf len %v != length %v", this.user.appAccount, len(*buf), length)
 		return -1
 	}
 	left := length
@@ -142,7 +142,7 @@ func (this *MIMCConnection) Readn(buf *[]byte, length int) int {
 		tmpBuf := make([]byte, left)
 		nread, err := this.tcpConn.Read(tmpBuf)
 		if err != nil || nread < 0 {
-			logger.Error("read error. err: %v, nread: %v, length: %v", err, nread, length)
+			logger.Error("[%v] read error. err: %v, nread: %v, length: %v", this.user.appAccount, err, nread, length)
 			return -1
 		}
 		if nread == 0 {
@@ -153,7 +153,7 @@ func (this *MIMCConnection) Readn(buf *[]byte, length int) int {
 		}
 		left = left - nread
 		if left < 0 {
-			logger.Debug("nread: %v, left: %v, length: %v, lenbuf: %v", nread, left, length, len(*buf))
+			logger.Debug("[%v] nread: %v, left: %v, length: %v, lenbuf: %v", this.user.appAccount, nread, left, length, len(*buf))
 			return length
 		}
 	}
@@ -187,7 +187,7 @@ func (this *MIMCConnection) Writen(buf *[]byte, length int) int {
 
 func (this *MIMCConnection) check(buf *[]byte, length int) bool {
 	if this.tcpConn == nil || buf == nil || len(*buf) < length {
-		logger.Debug("tcpConn: %v, buf:%v", this.tcpConn, buf)
+		logger.Debug("[%v] tcpConn: %v, buf:%v", this.user.appAccount, this.tcpConn, buf)
 		return false
 	}
 	return true

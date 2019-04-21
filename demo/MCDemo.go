@@ -25,14 +25,13 @@ var appAccount2 string = "happyysm"
 var acc2UUID = int64(10778725662851072)
 
 func init() {
-
-	log.SetLogLevel(log.InfoLevel)
+	fmt.Println("call init method of Demo")
+	log.SetLogLevel(log.DebugLevel)
 	log.SetLogPath("./mimc_demo.log")
 	//logger := log.GetLogger()
 }
 
 func main() {
-	fmt.Println("hello world")
 
 	// 创建用户
 	leijun := createUser(appAccount1)

@@ -84,6 +84,13 @@ func BuildBindPacket(mcUser *MCUser) *packet.MIMCV6Packet {
 	return v6Packet
 }
 
+func BuildPingPacket(mcUser *MCUser) *packet.MIMCV6Packet {
+	clientHeader := createClientHeader(mcUser, cnst.CMD_PING, id.Generate(), cnst.CIPHER_NONE)
+	v6Packet := packet.NewV6Packet()
+	v6Packet.ClientHeader(clientHeader)
+	return v6Packet
+}
+
 func BuildUnBindPacket(mcUser *MCUser) *packet.MIMCV6Packet {
 	clientHeader := createClientHeader(mcUser, cnst.CMD_UNBIND, id.Generate(), cnst.CIPHER_NONE)
 	v6Packet := packet.NewV6Packet()
@@ -233,10 +240,12 @@ func buildMIMCGroup(appId, topicId int64) *MIMCGroup {
 	return mimcGroup
 }
 
+/**
 func BuildPingPacket(mcUser *MCUser) *packet.MIMCV6Packet {
 	v6Packet := packet.NewV6Packet()
 	return v6Packet
 }
+*/
 
 func PayloadKey(key string, value []byte) []byte {
 	if len(key) == 0 || len(value) == 0 {

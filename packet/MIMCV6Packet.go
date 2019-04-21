@@ -156,7 +156,6 @@ func (this *MIMCV6Packet) HeaderId() []byte {
 	if this.clientHeader == nil {
 		return nil
 	}
-	logger.Debug("v6header: %v", this.clientHeader)
 	return []byte(*(this.clientHeader.Id))
 }
 
