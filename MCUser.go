@@ -696,6 +696,13 @@ func (this *MCUser) handleResponse(v6Packet *packet.MIMCV6Packet) {
 			errorType := bindResp.GetErrorType()
 			errorReason := bindResp.GetErrorReason()
 			errorDesc := bindResp.GetErrorDesc()
+			if strings.Compare(errorType, cnst.TOKEN_EXPIRED) == 0 ||
+				(strings.Compare(errorType, "auto") == 0 &&
+					strings.Compare(errorReason, cnst.TOKEN_INVALID) == 0) {
+				logger.Warn("[%v] current token is invalid:%v, and refresh token.", this.appAccount, this.token)
+				this.refreshToken()
+			}
+
 			logger.Debug("[%v] is kicked by server, chid:%v, uuid:%v, cmd:%v, errorType:%v, errorReason:%v, errorDesc:%v",
 				this.appAccount, header.GetChid(), header.GetUuid(), *cmd, errorType, errorReason, errorDesc)
 			if this.statusDelegate == nil {
