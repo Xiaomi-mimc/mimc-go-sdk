@@ -689,13 +689,22 @@ func (this *MCUser) handleResponse(v6Packet *packet.MIMCV6Packet) {
 		}
 	} else if cnst.CMD_KICK == *cmd {
 		this.status = Offline
-		kick := "kick"
-		logger.Debug("[%v] [handle] logout succ.", this.appAccount)
-		if this.statusDelegate == nil {
-			logger.Warn("[%v] status changed, you need to handle this.", this.appAccount)
-		} else {
-			this.statusDelegate.HandleChange(false, &kick, &kick, &kick)
+		bindResp := new(XMMsgBindResp)
+		err := Deserialize(v6Packet.GetPayload(), bindResp)
+		if err {
+			header := v6Packet.GetHeader()
+			errorType := bindResp.GetErrorType()
+			errorReason := bindResp.GetErrorReason()
+			errorDesc := bindResp.GetErrorDesc()
+			logger.Debug("[%v] is kicked by server, chid:%v, uuid:%v, cmd:%v, errorType:%v, errorReason:%v, errorDesc:%v",
+				this.appAccount, header.GetChid(), header.GetUuid(), *cmd, errorType, errorReason, errorDesc)
+			if this.statusDelegate == nil {
+				logger.Warn("[%v] status changed, you need to handle this.", this.appAccount)
+			} else {
+				this.statusDelegate.HandleChange(false, &errorType, &errorReason, &errorDesc)
+			}
 		}
+
 	} else {
 		logger.Debug("[%v] recv unknown cmd: %v", this.appAccount, *cmd)
 		return
