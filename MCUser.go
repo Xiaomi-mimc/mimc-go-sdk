@@ -36,7 +36,7 @@ func init() {
 
 type MCUser struct {
 	chid     int32
-	uuid     int64
+	uuid     uint64
 	resource string
 	status   UserStatus
 
@@ -45,7 +45,7 @@ type MCUser struct {
 	clientAttrs string
 	cloudAttrs  string
 
-	appId      int64
+	appId      uint64
 	appAccount string
 	appPackage string
 
@@ -92,7 +92,7 @@ func (this *MCUser) printUserInfo() {
 		this.uuid, this.securityKey, this.resource, this.chid, this.appPackage)
 }
 
-func NewUser(appId int64, appAccount string) *MCUser {
+func NewUser(appId uint64, appAccount string) *MCUser {
 	this := NewMCUser()
 	this.appAccount = appAccount
 	this.appId = appId
@@ -157,7 +157,7 @@ func (this *MCUser) InitAndSetup() {
 func (this *MCUser) fetchUserInfo() {
 	root, _ := exec.LookPath(os.Args[0])
 	dir := cnst.CACHE_DIR
-	key := strconv.FormatInt(this.appId, 10) + "_" + this.appAccount
+	key := strconv.FormatInt(int64(this.appId), 10) + "_" + this.appAccount
 	file := key + cnst.CACHE_FILE
 	userInfo := map[string]interface{}{}
 
@@ -173,7 +173,8 @@ func (this *MCUser) fetchUserInfo() {
 		chid, _ := userInfo["chid"].(json.Number).Int64()
 		this.chid = int32(chid)
 		this.appPackage = userInfo["appPackage"].(string)
-		this.uuid, _ = userInfo["uuid"].(json.Number).Int64()
+		uuid, _ := userInfo["uuid"].(json.Number).Int64()
+		this.uuid = uint64(uuid)
 
 		if strings.Compare(this.feDomain, "") == 0 ||
 			len(this.feAddress) == 0 ||
@@ -193,7 +194,7 @@ func (this *MCUser) fetchUserInfo() {
 func (this *MCUser) flushUserInfo() bool {
 	root, _ := exec.LookPath(os.Args[0])
 	dir := cnst.CACHE_DIR
-	key := strconv.FormatInt(this.appId, 10) + "_" + this.appAccount
+	key := strconv.FormatInt(int64(this.appId), 10) + "_" + this.appAccount
 	file := key + cnst.CACHE_FILE
 	userInfo := map[string]interface{}{}
 	userInfo["uuid"] = this.uuid
@@ -235,7 +236,7 @@ func (this *MCUser) refreshToken() bool {
 		}
 		data := tokenMap["data"].(map[string]interface{})
 		appId, _ := strconv.ParseInt(data["appId"].(string), 10, 64)
-		if appId != this.appId {
+		if uint64(appId) != this.appId {
 			logger.Warn("appId:%v in token no match appId: %v.", appId, this.appId)
 			return false
 		}
@@ -252,7 +253,7 @@ func (this *MCUser) refreshToken() bool {
 			logger.Error("[%v] Login fail, can not parse token string.", this.appAccount)
 			return false
 		}
-		this.uuid = uuid
+		this.uuid = uint64(uuid)
 		this.securityKey = data["miUserSecurityKey"].(string)
 		token, ok := data["token"]
 		this.feDomain = data["feDomainName"].(string)
@@ -440,7 +441,6 @@ func (this *MCUser) sendRoutine() {
 			}
 		}
 		if this.status == Online {
-
 			msgPacketToSend := this.messageToSend.Pop()
 			if msgPacketToSend == nil {
 				dist := CurrentTimeMillis() - this.lastPingTimestamp
@@ -459,10 +459,8 @@ func (this *MCUser) sendRoutine() {
 				logger.Debug("[%v] send msg packet.", this.appAccount)
 
 			}
-
-		} else {
-
 		}
+
 		if pkt == nil {
 			Sleep(100)
 			continue
@@ -503,10 +501,10 @@ func (this *MCUser) receiveRoutine() {
 			Sleep(1000)
 			continue
 		}
+
 		headerBins := make([]byte, cnst.V6_HEAD_LENGTH)
 		length := this.conn.Readn(&headerBins, int(cnst.V6_HEAD_LENGTH))
 		if length != int(cnst.V6_HEAD_LENGTH) {
-			logger.Error("[%v] read error head. need length: %v, read length: %v\n", this.appAccount, cnst.V6_HEAD_LENGTH, length)
 			this.conn.Reset()
 			Sleep(1000)
 			continue
@@ -753,7 +751,7 @@ func (this *MCUser) handleSecMsg(v6Packet *packet.MIMCV6Packet) {
 				logger.Warn("[%v] Handle SecMsg MIMCPacketList resource:, current resource:", this.appAccount, *(packetList.Resource), this.resource)
 				return
 			}
-			seqAckPacket := BuildSequenceAckPacket(this, packetList)
+			seqAckPacket, _ := BuildSequenceAckPacket(this, packetList)
 			pktToSend := msg.NewMsgPacket(cnst.MIMC_C2S_SINGLE_DIRECTION, seqAckPacket)
 			this.messageToSend.Push(pktToSend)
 			pktNum := len(packetList.Packets)
@@ -815,7 +813,7 @@ func (this *MCUser) SetResource(resource string) *MCUser {
 	this.resource = resource
 	return this
 }
-func (this *MCUser) SetUuid(uuid int64) *MCUser {
+func (this *MCUser) SetUuid(uuid uint64) *MCUser {
 	this.uuid = uuid
 	return this
 }
@@ -843,7 +841,7 @@ func (this *MCUser) SetAppAccount(appAccount string) *MCUser {
 	this.appAccount = appAccount
 	return this
 }
-func (this *MCUser) SetAppId(appId int64) *MCUser {
+func (this *MCUser) SetAppId(appId uint64) *MCUser {
 	this.appId = appId
 	return this
 }
@@ -851,7 +849,7 @@ func (this *MCUser) SetAppId(appId int64) *MCUser {
 func (this *MCUser) AppAccount() string {
 	return this.appAccount
 }
-func (this *MCUser) AppId() int64 {
+func (this *MCUser) AppId() uint64 {
 	return this.appId
 }
 func (this *MCUser) Conn() *MIMCConnection {
@@ -866,7 +864,7 @@ func (this *MCUser) FeAddress() []string {
 	return this.feAddress
 }
 
-func (this *MCUser) Uuid() int64 {
+func (this *MCUser) Uuid() uint64 {
 	return this.uuid
 }
 func (this *MCUser) Chid() int32 {

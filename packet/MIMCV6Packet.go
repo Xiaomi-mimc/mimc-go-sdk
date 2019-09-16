@@ -29,7 +29,6 @@ type MIMCV6Packet struct {
 
 func NewV6Packet() *MIMCV6Packet {
 	packet := new(MIMCV6Packet)
-	logger = log.GetLogger()
 	return packet
 }
 func ParseBytesToPacket(headerBins, bodyBins, crcBins *[]byte, bodyKey *[]byte, secKey *string) *MIMCV6Packet {

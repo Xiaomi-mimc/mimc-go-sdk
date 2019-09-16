@@ -16,7 +16,7 @@ import (
  **/
 
 var httpUrl string = "https://mimc.chat.xiaomi.net/api/account/token"
-var appId int64 = int64(2882303761517613988)
+var appId uint64 = uint64(2882303761517613988)
 var appKey string = "5361761377988"
 var appSecurt string = "2SZbrJOAL1xHRKb7L9AiRQ=="
 var appAccount1 string = "happycsy"

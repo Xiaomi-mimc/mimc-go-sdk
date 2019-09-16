@@ -104,11 +104,13 @@ func (this *MIMCConnection) Reset() {
 	if this.tcpConn != nil {
 		this.tcpConn.Close()
 	}
-	this.user.lastCreateConnTimestamp = 0
-	network_error := "NETWORK_ERROR"
-	this.user.status = Offline
-	this.user.statusDelegate.HandleChange(false, &network_error, &network_error, &network_error)
-	this.init()
+	if this.user.tryLogin {
+		this.user.lastCreateConnTimestamp = 0
+		network_error := "NETWORK_ERROR"
+		this.user.status = Offline
+		this.user.statusDelegate.HandleChange(false, &network_error, &network_error, &network_error)
+		this.init()
+	}
 
 }
 
@@ -143,7 +145,7 @@ func (this *MIMCConnection) Readn(buf *[]byte, length int) int {
 		nread, err := this.tcpConn.Read(tmpBuf)
 		if err != nil || nread < 0 {
 			logger.Error("[%v] read error. err: %v, nread: %v, length: %v", this.user.appAccount, err, nread, length)
-			return -1
+			return nread
 		}
 		if nread == 0 {
 			break
