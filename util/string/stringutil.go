@@ -220,6 +220,7 @@ func FetchUserInfo(root, dir, file *string, userInfo map[string]interface{}) boo
 		return false
 	}
 	data, _ := ioutil.ReadAll(f)
+	logger.Info("path: " + *path + " data: " + string(data))
 	var localInfo map[string]interface{} = make(map[string]interface{})
 	if len(data) != 0 {
 		decoder := json.NewDecoder(strings.NewReader(string(data)))

@@ -10,6 +10,8 @@ import (
 var idGenerator *IdGenerator
 var lock *sync.Mutex = &sync.Mutex{}
 
+var idlock *sync.Mutex = &sync.Mutex{}
+
 func Generate() *string {
 	if idGenerator == nil {
 		lock.Lock()
@@ -27,6 +29,8 @@ type IdGenerator struct {
 }
 
 func (this *IdGenerator) generate() *string {
+	idlock.Lock()
+	defer idlock.Unlock()
 	this.counter += uint64(cnst.MIMC_COUNTER_VALUE)
 	str := strconv.FormatUint(this.counter, 10)
 	return &str

@@ -45,7 +45,7 @@ func createClientHeader(mcUser *MCUser, cmd string, msgId *string, cipher int32)
 	header.Id = msgId
 	chid := cnst.MIMC_CHID
 	header.Chid = &chid
-	uuid := mcUser.Uuid()
+	uuid := int64(mcUser.Uuid())
 	header.Uuid = &uuid
 	resource := mcUser.Resource()
 	header.Resource = &(resource)
@@ -85,6 +85,7 @@ func BuildBindPacket(mcUser *MCUser) *packet.MIMCV6Packet {
 }
 
 func BuildPingPacket(mcUser *MCUser) *packet.MIMCV6Packet {
+
 	clientHeader := createClientHeader(mcUser, cnst.CMD_PING, id.Generate(), cnst.CIPHER_NONE)
 	v6Packet := packet.NewV6Packet()
 	v6Packet.ClientHeader(clientHeader)
@@ -116,11 +117,12 @@ func BuildConnectionPacket(udid string, mcUser *MCUser) *packet.MIMCV6Packet {
 	return v6Packet
 }
 
-func BuildSequenceAckPacket(mcUser *MCUser, packetList *MIMCPacketList) *packet.MIMCV6Packet {
-	clientHeader := createClientHeader(mcUser, cnst.CMD_SECMSG, id.Generate(), cnst.CIPHER_RC4)
+func BuildSequenceAckPacket(mcUser *MCUser, packetList *MIMCPacketList) (*packet.MIMCV6Packet, *string) {
+	packetId := id.Generate()
+	clientHeader := createClientHeader(mcUser, cnst.CMD_SECMSG, packetId, cnst.CIPHER_RC4)
 
 	mimcPacket := new(MIMCPacket)
-	mimcPacket.PacketId = id.Generate()
+	mimcPacket.PacketId = packetId
 	pkg := mcUser.AppPackage()
 	mimcPacket.Package = &pkg
 	mimcPacket.Sequence = packetList.MaxSequence
@@ -131,6 +133,7 @@ func BuildSequenceAckPacket(mcUser *MCUser, packetList *MIMCPacketList) *packet.
 	seqAck.Uuid = packetList.Uuid
 	seqAck.Resource = packetList.Resource
 	seqAck.Sequence = packetList.MaxSequence
+	seqAck.AppId = &(mcUser.appId)
 
 	seqAckBin, _ := proto.Marshal(seqAck)
 
@@ -142,14 +145,13 @@ func BuildSequenceAckPacket(mcUser *MCUser, packetList *MIMCPacketList) *packet.
 	v6Packet.PayloadType(cnst.PAYLOAD_TYPE)
 	v6Packet.ClientHeader(clientHeader)
 	v6Packet.Payload(mimcBins)
-
-	return v6Packet
+	return v6Packet, mimcPacket.PacketId
 }
 func BuildP2TMessagePacket(mcUser *MCUser, appTopic int64, msg []byte, isStore bool, bizType *string) (*packet.MIMCV6Packet, *MIMCPacket) {
 	clientHeader := createClientHeader(mcUser, cnst.CMD_SECMSG, id.Generate(), cnst.CIPHER_RC4)
 
 	fromUser := buildMIMCUser(mcUser)
-	toGroup := buildMIMCGroup(mcUser.AppId(), appTopic)
+	toGroup := buildMIMCGroup(mcUser.AppId(), uint64(appTopic))
 
 	p2tMsg := new(MIMCP2TMessage)
 	p2tMsg.From = fromUser
@@ -233,7 +235,7 @@ func buildMIMCUser(mcUser *MCUser) *MIMCUser {
 	return mimcUser
 }
 
-func buildMIMCGroup(appId, topicId int64) *MIMCGroup {
+func buildMIMCGroup(appId, topicId uint64) *MIMCGroup {
 	mimcGroup := new(MIMCGroup)
 	mimcGroup.AppId = &appId
 	mimcGroup.TopicId = &topicId

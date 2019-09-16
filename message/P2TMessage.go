@@ -5,12 +5,12 @@ type P2TMessage struct {
 	sequence    *int64
 	timestamp   *int64
 	fromAccount *string
-	groupId     *int64
+	groupId     *uint64
 	bizType     *string
 	payload     []byte
 }
 
-func NewP2tMsg(packetId, fromAccount *string, sequence, timestamp, groupId *int64, bizType *string, payload []byte) *P2TMessage {
+func NewP2tMsg(packetId, fromAccount *string, sequence, timestamp *int64, groupId *uint64, bizType *string, payload []byte) *P2TMessage {
 	p2tMsg := new(P2TMessage)
 	p2tMsg.packetId = packetId
 	p2tMsg.sequence = sequence
@@ -43,6 +43,6 @@ func (this *P2TMessage) FromAccount() *string {
 func (this *P2TMessage) Payload() []byte {
 	return this.payload
 }
-func (this *P2TMessage) GroupId() *int64 {
+func (this *P2TMessage) GroupId() *uint64 {
 	return this.groupId
 }

@@ -10,13 +10,13 @@ import (
 
 type TokenHandler struct {
 	httpUrl    string
-	AppId      int64  `json:"appId"`
+	AppId      uint64 `json:"appId"`
 	AppKey     string `json:"appKey"`
 	AppSecret  string `json:"appSecret"`
 	AppAccount string `json:"appAccount"`
 }
 
-func NewTokenHandler(httpUrl, appKey, appSecret, appAccount *string, appId *int64) *TokenHandler {
+func NewTokenHandler(httpUrl, appKey, appSecret, appAccount *string, appId *uint64) *TokenHandler {
 	tokenHandler := new(TokenHandler)
 	tokenHandler.httpUrl = *httpUrl
 	tokenHandler.AppId = *appId
