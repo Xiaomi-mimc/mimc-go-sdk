@@ -29,6 +29,7 @@ var lock sync.Mutex
 var level LogLevel
 var log *Logger
 var logPath string
+var zero = [...]string{"0000", "000", "00", "0"}
 
 func init() {
 	level = InfoLevel
@@ -100,6 +101,12 @@ func currTime() string {
 	now := time.Now()
 	const base_format = "2006-01-02 15:04:05"
 	nsecStr := strconv.Itoa(now.Nanosecond())
-	timeStr := now.Format(base_format) + "." + nsecStr[0:4]
+	nsecLen := len(nsecStr)
+	if nsecLen < 4 {
+		nsecStr = nsecStr[0:nsecLen] + zero[nsecLen]
+	} else {
+		nsecStr = nsecStr[0:4]
+	}
+	timeStr := now.Format(base_format) + "." + nsecStr
 	return timeStr
 }
